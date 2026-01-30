@@ -83,73 +83,35 @@ This installs wrangler and TypeScript dependencies needed for the template.
 
 ---
 
-## Step 2: Get Domain and Worker Name
+## Step 2: Select Domain
 
-### 2.1 Get Available Domains
+Ask: **"Which domain do you want to set up Pay Per Crawl for?"**
 
-First, list the user's Cloudflare zones:
+Let the user provide the domain name directly. If they have multiple Cloudflare accounts, ask which account first.
 
-```bash
-npx wrangler zones list
-```
+Confirm the domain is on an **Enterprise plan** with **Bot Management enabled** before proceeding.
 
-This returns their available domains. Present these as options, or let them type their own.
+### Generate Worker Name
 
-### 2.2 Ask Which Domain to Protect
+Once you have the domain, generate the worker name:
 
-Ask the user: **Which domain will this worker protect?**
-
-(No pre-populated suggestions - use their actual zones from the command above, or let them type it.)
-
-### 2.3 Generate Worker Name
-
-Workers names only allow **lowercase alphanumeric characters and hyphens**.
-
-**Sanitization steps:**
-1. Convert to lowercase
-2. Replace `.` and `_` with `-`
-3. Remove any character that's not `a-z`, `0-9`, or `-`
-4. Collapse multiple hyphens (`--`) into single (`-`)
-5. Remove leading/trailing hyphens
-6. Prefix with `pay-per-crawl-`
-
-**Examples:**
 | Domain | Worker Name |
 |--------|-------------|
-| `Example.COM` | `pay-per-crawl-example-com` |
-| `my_site.io` | `pay-per-crawl-my-site-io` |
+| `example.com` | `pay-per-crawl-example-com` |
 | `shop.example.co.uk` | `pay-per-crawl-shop-example-co-uk` |
 
-**JavaScript helper:**
-```javascript
-function toWorkerName(domain) {
-  const slug = domain
-    .toLowerCase()
-    .replace(/[._]/g, '-')
-    .replace(/[^a-z0-9-]/g, '')
-    .replace(/-+/g, '-')
-    .replace(/^-|-$/g, '');
-  return `pay-per-crawl-${slug}`;
-}
-```
-
-Update `wrangler.jsonc`:
-```jsonc
-"name": "pay-per-crawl-example-com",
-```
+Worker names: lowercase alphanumeric and hyphens only. Replace `.` with `-`, prefix with `pay-per-crawl-`.
 
 ---
 
 ## Step 3: Identify Paths to Protect
 
-Ask the user which paths they want to charge for:
+Now that the domain is confirmed, ask: **"Which URL paths do you want to charge for?"**
 
-| Example Path | Description |
-|-------------|-------------|
-| `/blog/*` | All blog content |
-| `/api/premium/*` | Premium API endpoints |
-| `/content/*` | Content pages |
-| `/articles/*` | Article pages |
+Examples:
+- `/blog/*` - All blog content
+- `/articles/*` - Article pages
+- `/api/premium/*` - Premium API endpoints
 
 **Save these paths** - you'll need them for both PRICING_RULES and routes.
 
