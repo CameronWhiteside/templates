@@ -73,6 +73,14 @@ npx wrangler whoami
 
 If not logged in, run `npx wrangler login`.
 
+### 1.3 Install Dependencies
+
+```bash
+npm install
+```
+
+This installs wrangler and TypeScript dependencies needed for the template.
+
 ---
 
 ## Step 2: Get Domain and Worker Name
@@ -95,15 +103,39 @@ Ask the user: **Which domain will this worker protect?**
 
 ### 2.3 Generate Worker Name
 
-Convert the domain to a worker name:
-- Replace `.` with `-`
-- Prefix with `pay-per-crawl-`
+Workers names only allow **lowercase alphanumeric characters and hyphens**.
 
-**Formula:** `pay-per-crawl-{domain.replace(/\./g, '-')}`
+**Sanitization steps:**
+1. Convert to lowercase
+2. Replace `.` and `_` with `-`
+3. Remove any character that's not `a-z`, `0-9`, or `-`
+4. Collapse multiple hyphens (`--`) into single (`-`)
+5. Remove leading/trailing hyphens
+6. Prefix with `pay-per-crawl-`
+
+**Examples:**
+| Domain | Worker Name |
+|--------|-------------|
+| `Example.COM` | `pay-per-crawl-example-com` |
+| `my_site.io` | `pay-per-crawl-my-site-io` |
+| `shop.example.co.uk` | `pay-per-crawl-shop-example-co-uk` |
+
+**JavaScript helper:**
+```javascript
+function toWorkerName(domain) {
+  const slug = domain
+    .toLowerCase()
+    .replace(/[._]/g, '-')
+    .replace(/[^a-z0-9-]/g, '')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '');
+  return `pay-per-crawl-${slug}`;
+}
+```
 
 Update `wrangler.jsonc`:
 ```jsonc
-"name": "pay-per-crawl-{generated-name}",
+"name": "pay-per-crawl-example-com",
 ```
 
 ---
