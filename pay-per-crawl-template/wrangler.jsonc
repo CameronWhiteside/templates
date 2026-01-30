@@ -62,7 +62,7 @@
 		"PRICING_RULES": [
 			{
 				"pattern": "/content/*",
-				"price": 0.01,
+				"price": 1.00,
 				"bot_score_threshold": 30,
 				"except_bots": []
 			}

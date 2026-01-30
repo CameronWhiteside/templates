@@ -191,108 +191,43 @@ Cloudflare Bot Management assigns a score from 1-99:
 
 The threshold determines which requests pass through without paying:
 
-| Threshold | Effect | Use Case |
-|-----------|--------|----------|
-| 30 | Blocks scores 1-29, allows 30+ | Lenient - only blocks obvious bots |
-| 50 | Blocks scores 1-49, allows 50+ | Moderate - blocks suspicious traffic |
-| 70 | Blocks scores 1-69, allows 70+ | Strict - only allows definite humans |
+| Threshold | Effect |
+|-----------|--------|
+| 1 | Requires payment from all bots including verified |
+| 2 | Allows only verified bots (score 1), all others pay |
+| 30 | Allows likely-human traffic (30+), obvious bots pay |
 
-**Recommended starting point: 30** - This blocks known bots and likely-automated traffic while allowing uncertain cases through. You can tighten later if needed.
+**Recommended starting point: 30** - Blocks known bots and likely-automated traffic while allowing uncertain cases through.
 
 **This is REQUIRED** - there is no default value.
 
 ---
 
-## Step 6: Add Bot Exceptions
+## Step 6: Bot Exceptions (Optional)
 
-Help the user decide which bots should be allowed through WITHOUT paying. Ask these questions in order:
+Bots listed in `except_bots` get free access without a 402 response. All other bots can still access the content—they just need to pay for it.
 
-### Question 1: Search Engine Visibility
+Ask: **"Are there specific bots you want to allow free access to?"**
 
-**"Do you want search engines to index this content for SEO?"**
+This is typically used for bots you already have a partnership or licensing agreement with. Most configurations leave this empty.
 
-If YES, add these to `except_bots`:
-| Bot | Operator | Purpose |
-|-----|----------|---------|
-| `Googlebot` | Google | Google Search indexing |
-| `BingBot` | Microsoft | Bing Search indexing |
-| `Applebot` | Apple | Apple Search / Siri |
+If the user names specific bots, match them to the supported list in `src/bots.ts`. Common examples:
+- Search: `Googlebot`, `BingBot`, `Applebot`
+- AI training: `GPTBot`, `ClaudeBot`, `CCBot`
+- AI assistants: `ChatGPT-User`, `Claude-User`, `PerplexityBot`
 
-### Question 2: AI Assistant Citations
+### Unrecognized Bots
 
-**"Do you want AI assistants to cite your content when users ask questions in real-time?"**
+If a bot isn't in the supported list, ask:
 
-(These fetch content live when a user asks a question, and may cite/link back to you)
+1. "Do you have the exact User-Agent string or Cloudflare detection ID for this bot?"
+2. "Is this a bot that MUST be allowed free access?"
 
-If YES, add these to `except_bots`:
-| Bot | Operator | Purpose |
-|-----|----------|---------|
-| `ChatGPT-User` | OpenAI | ChatGPT browsing mode |
-| `Claude-User` | Anthropic | Claude web access |
-| `Perplexity-User` | Perplexity | Perplexity answers |
-| `MistralAI-User` | Mistral | Mistral chat |
-| `DuckAssistBot` | DuckDuckGo | DuckDuckGo AI answers |
-| `Meta-ExternalFetcher` | Meta | Meta AI assistant |
+If yes to both, confirm with the user:
 
-### Question 3: AI Search Engines
+> "This bot isn't in the standard list. After deploying the template, I can help you add custom matching logic to the worker code using the User-Agent or detection ID you provide. Want to proceed with setup now and handle this customization after?"
 
-**"Do you want AI-powered search engines to include your content in search results?"**
-
-If YES, add these to `except_bots`:
-| Bot | Operator | Purpose |
-|-----|----------|---------|
-| `OAI-SearchBot` | OpenAI | SearchGPT |
-| `PerplexityBot` | Perplexity | Perplexity search crawler |
-| `Claude-SearchBot` | Anthropic | Claude search |
-
-### Question 4: AI Training Crawlers
-
-**"Do you want AI companies to crawl your content for model training?"**
-
-(Most publishers say NO here - this is the content they typically want to charge for)
-
-If YES, add these to `except_bots`:
-| Bot | Operator | Purpose |
-|-----|----------|---------|
-| `GPTBot` | OpenAI | OpenAI training data |
-| `ClaudeBot` | Anthropic | Anthropic training data |
-| `CCBot` | Common Crawl | Common Crawl dataset |
-| `Google-CloudVertexBot` | Google | Google AI training |
-| `Meta-ExternalAgent` | Meta | Meta AI training |
-| `Amazonbot` | Amazon | Amazon AI training |
-| `Bytespider` | ByteDance | ByteDance/TikTok AI |
-| `PetalBot` | Huawei | Huawei AI |
-| `FacebookBot` | Meta | Meta crawling |
-
-### Question 5: Web Archives
-
-**"Do you want your content preserved in web archives like the Internet Archive?"**
-
-If YES, add to `except_bots`:
-| Bot | Operator | Purpose |
-|-----|----------|---------|
-| `archive.org_bot` | Internet Archive | Wayback Machine |
-
-### Question 6: Other Bots
-
-**"Are there any other specific bots you want to allow?"**
-
-Additional available bots:
-| Bot | Operator | Purpose |
-|-----|----------|---------|
-| `ChatGPT agent` | OpenAI | ChatGPT agents/plugins |
-| `Novellum AI Crawl` | Novellum | Novellum AI |
-| `Timpibot` | Timpi | Timpi search |
-| `ProRataInc` | ProRata.ai | ProRata content licensing |
-| `Anchor Browser` | Anchor | Anchor AI browser |
-
-### If User Mentions an Unrecognized Bot
-
-Ask:
-1. "Do you have the exact bot name or User-Agent string?"
-2. "Do you have a Cloudflare detection ID for this bot?"
-
-See `src/bots.ts` for the full registry with detection IDs.
+If they accept, note the bot details and continue. Return to add custom logic in `src/index.ts` after deployment.
 
 ---
 
@@ -303,7 +238,7 @@ Edit `wrangler.jsonc` with the gathered information.
 ### 7.1 Set Worker Name (from Step 2)
 
 ```jsonc
-"name": "pay-per-crawl-willsguitars-com",
+"name": "pay-per-crawl-example-com",
 ```
 
 ### 7.2 Add Routes for Each Priced Path
@@ -312,12 +247,12 @@ Edit `wrangler.jsonc` with the gathered information.
 
 **Format:** `{domain}{pattern}`
 
-Example for `willsguitars.com` with `/blog/*` and `/premium/*`:
+Example for `example.com` with `/blog/*` and `/premium/*`:
 
 ```jsonc
 "routes": [
-  { "pattern": "willsguitars.com/blog/*", "zone_name": "willsguitars.com" },
-  { "pattern": "willsguitars.com/premium/*", "zone_name": "willsguitars.com" }
+  { "pattern": "example.com/blog/*", "zone_name": "example.com" },
+  { "pattern": "example.com/premium/*", "zone_name": "example.com" }
 ],
 ```
 
@@ -380,18 +315,18 @@ Users can add multiple rules for different paths with different prices. Simply a
     "except_bots": ["Googlebot", "BingBot"]
   },
   
-  // Rule 2: Premium API (different price/threshold)
+  // Rule 2: Premium API (stricter threshold)
   {
     "pattern": "/api/premium/*",
     "price": /* your price */,
-    "bot_score_threshold": 50
+    "bot_score_threshold": 2
   },
   
-  // Rule 3: Articles (allow more bots)
+  // Rule 3: Articles
   {
     "pattern": "/articles/*",
     "price": /* your price */,
-    "bot_score_threshold": 40,
+    "bot_score_threshold": 30,
     "except_bots": ["Googlebot", "BingBot", "Applebot"]
   }
 ]
@@ -599,7 +534,7 @@ Zone → Security → Bots → Configure Bot Management
 
 ### "Verified bots are still getting through"
 
-**Expected behavior.** Verified bots are always allowed to prevent breaking legitimate search engine indexing. This matches how WAF rules work.
+**Expected behavior.** Verified bots (score 1) are always allowed through by default. This matches how WAF rules work.
 
 To block verified bots, you would need to modify the worker code directly (not recommended).
 
