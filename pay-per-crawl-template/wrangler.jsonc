@@ -12,19 +12,33 @@
  */
 {
 	"$schema": "node_modules/wrangler/config-schema.json",
-	"name": "pay-per-crawl",
+
+	// =========================================================================
+	// WORKER NAME - Update for your domain
+	// =========================================================================
+	// Format: pay-per-crawl-{domain-slug}
+	// Example: pay-per-crawl-willsguitars-com
+	//
+	"name": "pay-per-crawl-example-com",
+
 	"main": "src/index.ts",
 	"compatibility_date": "2026-01-30",
 	"observability": { "enabled": true },
 	"upload_source_maps": true,
 
 	// =========================================================================
-	// ROUTES - Where this worker runs
+	// ROUTES - One route per priced path
 	// =========================================================================
-	// Uncomment and edit for your domain:
+	// IMPORTANT: Add a route for EACH path pattern in PRICING_RULES.
+	// Only these paths will be intercepted by the worker.
+	//
+	// Format: "{domain}{pattern}"
+	//
+	// Example for willsguitars.com with /blog/* and /premium/* rules:
 	//
 	// "routes": [
-	// 	{ "pattern": "example.com/*", "zone_name": "example.com" }
+	// 	{ "pattern": "willsguitars.com/blog/*", "zone_name": "willsguitars.com" },
+	// 	{ "pattern": "willsguitars.com/premium/*", "zone_name": "willsguitars.com" }
 	// ],
 
 	"vars": {
@@ -33,6 +47,8 @@
 		// =====================================================================
 		// Define which paths to protect and at what price.
 		// Rules are checked in order - first match wins.
+		//
+		// IMPORTANT: Each pattern here needs a matching route above!
 		//
 		// Each rule needs:
 		//   pattern            - Path to protect ("/blog/*" or "/api/premium")
@@ -57,9 +73,12 @@
 		],
 
 		// =====================================================================
-		// BYPASS PATHS - Never blocked
+		// BYPASS PATHS - Never blocked (within routed paths)
 		// =====================================================================
-		// These paths always pass through, regardless of bot score.
+		// If a request matches a route but also matches a bypass path,
+		// it passes through without blocking.
+		//
+		// Note: Paths NOT in routes above won't hit this worker at all.
 		//
 		"BYPASS_PATHS": [
 			"/robots.txt",

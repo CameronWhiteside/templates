@@ -75,7 +75,30 @@ If not logged in, run `npx wrangler login`.
 
 ---
 
-## Step 2: Identify Paths to Protect
+## Step 2: Get Domain and Worker Name
+
+Ask the user: **What domain will this worker protect?**
+
+Example: `willsguitars.com`
+
+**Generate the worker name** by converting the domain to a slug:
+- Replace `.` with `-`
+- Prefix with `pay-per-crawl-`
+
+| Domain | Worker Name |
+|--------|-------------|
+| `willsguitars.com` | `pay-per-crawl-willsguitars-com` |
+| `example.co.uk` | `pay-per-crawl-example-co-uk` |
+| `my-site.io` | `pay-per-crawl-my-site-io` |
+
+Update `wrangler.jsonc`:
+```jsonc
+"name": "pay-per-crawl-willsguitars-com",
+```
+
+---
+
+## Step 3: Identify Paths to Protect
 
 Ask the user which paths they want to charge for:
 
@@ -86,9 +109,11 @@ Ask the user which paths they want to charge for:
 | `/content/*` | Content pages |
 | `/articles/*` | Article pages |
 
+**Save these paths** - you'll need them for both PRICING_RULES and routes.
+
 ---
 
-## Step 3: Set Price for Each Path
+## Step 4: Set Price for Each Path
 
 For each path, determine the price in USD:
 
@@ -106,7 +131,7 @@ For each path, determine the price in USD:
 
 ---
 
-## Step 4: Set Bot Score Threshold
+## Step 5: Set Bot Score Threshold
 
 For each path, determine the threshold. Requests with bot score >= threshold are allowed through.
 
@@ -120,7 +145,7 @@ For each path, determine the threshold. Requests with bot score >= threshold are
 
 ---
 
-## Step 5: Add Bot Exceptions (Optional)
+## Step 6: Add Bot Exceptions (Optional)
 
 If the user wants specific bots to always pass through (e.g., allow Googlebot for SEO), add them to `except_bots`.
 
@@ -132,9 +157,32 @@ If the user wants specific bots to always pass through (e.g., allow Googlebot fo
 
 ---
 
-## Step 6: Configure wrangler.jsonc
+## Step 7: Configure wrangler.jsonc
 
-Edit `wrangler.jsonc` with the gathered information:
+Edit `wrangler.jsonc` with the gathered information.
+
+### 7.1 Set Worker Name (from Step 2)
+
+```jsonc
+"name": "pay-per-crawl-willsguitars-com",
+```
+
+### 7.2 Add Routes for Each Priced Path
+
+**IMPORTANT:** Create ONE route for EACH path pattern. This keeps the worker narrow - it only intercepts paths that need pricing evaluation.
+
+**Format:** `{domain}{pattern}`
+
+Example for `willsguitars.com` with `/blog/*` and `/premium/*`:
+
+```jsonc
+"routes": [
+  { "pattern": "willsguitars.com/blog/*", "zone_name": "willsguitars.com" },
+  { "pattern": "willsguitars.com/premium/*", "zone_name": "willsguitars.com" }
+],
+```
+
+### 7.3 Add Pricing Rules
 
 ```jsonc
 "PRICING_RULES": [
@@ -152,25 +200,12 @@ Edit `wrangler.jsonc` with the gathered information:
 ]
 ```
 
+**Each PRICING_RULE pattern must have a matching route!**
+
 For bot exceptions, you can also edit `src/bots.config.ts` which has preset combinations like:
 - `STANDARD_EXCEPTIONS` - Search engines only (Googlebot, BingBot, Applebot)
 - `PERMISSIVE_EXCEPTIONS` - Search engines + AI assistants
 - `NO_EXCEPTIONS` - Charge all bots
-
----
-
-## Step 7: Configure Routes
-
-Uncomment and edit the routes section:
-
-```jsonc
-"routes": [
-  {
-    "pattern": "example.com/*",
-    "zone_name": "example.com"
-  }
-]
-```
 
 ---
 
@@ -184,6 +219,8 @@ npm run deploy
 ---
 
 ## Step 9: Verify Deployment
+
+**Replace `example.com` with the user's actual domain in these commands.**
 
 ```bash
 # Test a protected path (should return 402 for bot-like requests)
@@ -262,9 +299,32 @@ No need to delete and recreate - just edit in place.
 
 | File | Purpose |
 |------|---------|
-| `wrangler.jsonc` | Main config: routes, pricing rules, bypass paths |
+| `wrangler.jsonc` | Main config: worker name, routes, pricing rules |
 | `src/bots.config.ts` | Bot exception presets (easy to read/edit) |
 | `src/bots.ts` | Full bot registry with detection IDs (reference only) |
+
+### Why Narrow Routes?
+
+Instead of a catch-all route (`example.com/*`), this template uses **one route per priced path**:
+
+```jsonc
+// Good - narrow routes
+"routes": [
+  { "pattern": "example.com/blog/*", "zone_name": "example.com" },
+  { "pattern": "example.com/premium/*", "zone_name": "example.com" }
+]
+
+// Avoid - catch-all route
+"routes": [
+  { "pattern": "example.com/*", "zone_name": "example.com" }
+]
+```
+
+**Benefits:**
+- Worker only intercepts traffic it needs to evaluate
+- Zero overhead on unpriced paths (homepage, assets, etc.)
+- Cleaner Worker list in Cloudflare dashboard
+- Easier to debug and reason about
 
 ### Environment Variables
 
