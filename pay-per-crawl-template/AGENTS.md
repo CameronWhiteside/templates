@@ -10,44 +10,62 @@ A Worker template that implements path-based pricing for AI crawlers. All unveri
 
 ---
 
-## Prerequisites (REQUIRED)
+## Step 0: Prerequisite Qualification (ASK FIRST)
 
-> **This template will NOT function correctly without these prerequisites.**
+> **IMPORTANT:** Before ANY technical setup, ask these 3 questions. If the user answers NO to any of them, they cannot use this template yet.
 
-### 1. Enterprise Bot Management
+### Ask the User These Questions
 
-Must be enabled on your Cloudflare zone.
+**Question 1:** Do you have an Enterprise Cloudflare account with Bot Management enabled?
 
-**What happens without it:**
-- `cf.botManagement` is undefined
-- All traffic gets bot score 99 (treated as human)
-- NO blocking will occur
-- The worker silently passes all traffic through
+**Question 2:** Have you been enrolled in the Pay Per Crawl Beta program?
 
-### 2. Pay Per Crawl Beta
-
-Must be enabled for your Cloudflare account.
-
-**What happens without it:**
-- Worker deploys but 402 responses won't be processed correctly by crawlers
-- No revenue tracking in AI Crawl Control dashboard
-
-### Verify Prerequisites
-
-```bash
-# Check if Bot Management is available (requires API token with zone read permission)
-curl -s "https://api.cloudflare.com/client/v4/zones/{zone_id}/bot_management" \
-  -H "Authorization: Bearer $CF_API_TOKEN" | jq '.result'
-
-# Check Pay Per Crawl Beta
-# Go to: AI Crawl Control → Settings → Pay Per Crawl toggle should be available
-```
+**Question 3:** Is your business located in one of these jurisdictions: United States, United Kingdom, European Union, Canada, or Australia?
 
 ---
 
-## Interactive Setup Flow
+### If ANY Answer is NO
 
-### Step 1: Verify Cloudflare Authentication
+Stop the technical setup and provide this guidance:
+
+> **You're not quite ready for Pay Per Crawl yet.**
+>
+> Pay Per Crawl requires:
+> - Enterprise plan with Bot Management
+> - Enrollment in the Pay Per Crawl Beta
+> - Business in a supported jurisdiction (US, UK, EU, Canada, Australia)
+>
+> **Next steps:**
+> 1. Contact your Cloudflare account team to discuss eligibility
+> 2. Review the documentation: https://developers.cloudflare.com/ai-crawl-control/features/pay-per-crawl/
+>
+> Once you have Enterprise Bot Management and Beta enrollment confirmed, come back and we can set this up!
+
+**Do NOT proceed with technical setup if prerequisites are not met.**
+
+---
+
+### If ALL Answers are YES
+
+Proceed to Step 1 to verify their dashboard state and begin technical setup.
+
+---
+
+## Step 1: Verify Dashboard State
+
+Before deploying the Worker, confirm their Cloudflare account is properly configured:
+
+### 1.1 Verify Pay Per Crawl is Enabled in Dashboard
+
+Ask the user to check:
+
+1. Go to **AI Crawl Control** in the Cloudflare dashboard
+2. Navigate to **Settings**
+3. Confirm **Pay Per Crawl** toggle is available and enabled
+
+If the toggle is not visible, they need to contact their account team - Beta enrollment may not be complete.
+
+### 1.2 Verify Cloudflare Authentication
 
 ```bash
 npx wrangler whoami
@@ -55,7 +73,9 @@ npx wrangler whoami
 
 If not logged in, run `npx wrangler login`.
 
-### Step 2: Identify Paths to Protect
+---
+
+## Step 2: Identify Paths to Protect
 
 Ask the user which paths they want to charge for:
 
@@ -66,7 +86,9 @@ Ask the user which paths they want to charge for:
 | `/content/*` | Content pages |
 | `/articles/*` | Article pages |
 
-### Step 3: Set Price for Each Path
+---
+
+## Step 3: Set Price for Each Path
 
 For each path, determine the price in cents:
 
@@ -82,7 +104,9 @@ For each path, determine the price in cents:
 - Minimum: 1 cent ($0.01)
 - Must be whole numbers (no decimals)
 
-### Step 4: Set Bot Score Threshold
+---
+
+## Step 4: Set Bot Score Threshold
 
 For each path, determine the threshold. Requests with bot score >= threshold are allowed through.
 
@@ -94,7 +118,9 @@ For each path, determine the threshold. Requests with bot score >= threshold are
 
 **This is REQUIRED** - there is no default value.
 
-### Step 5: Add Bot Exceptions (Optional)
+---
+
+## Step 5: Add Bot Exceptions (Optional)
 
 If the user wants specific bots to always pass through (e.g., allow Googlebot for SEO), add them to `except_bots`.
 
@@ -104,7 +130,9 @@ If the user wants specific bots to always pass through (e.g., allow Googlebot fo
 2. "Do you have a Cloudflare detection ID for this bot?"
 3. "Is there another way we can identify this crawler?"
 
-### Step 6: Configure wrangler.jsonc
+---
+
+## Step 6: Configure wrangler.jsonc
 
 Edit `wrangler.jsonc` with the gathered information:
 
@@ -124,7 +152,9 @@ Edit `wrangler.jsonc` with the gathered information:
 ]
 ```
 
-### Step 7: Configure Routes
+---
+
+## Step 7: Configure Routes
 
 Uncomment and edit the routes section:
 
@@ -137,14 +167,18 @@ Uncomment and edit the routes section:
 ]
 ```
 
-### Step 8: Deploy
+---
+
+## Step 8: Deploy
 
 ```bash
 npm install
 npm run deploy
 ```
 
-### Step 9: Verify Deployment
+---
+
+## Step 9: Verify Deployment
 
 ```bash
 # Test a protected path (should return 402 for bot-like requests)
