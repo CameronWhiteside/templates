@@ -172,11 +172,32 @@ Ask the user: **What price do you want to set for each path?**
 
 For each path, determine the threshold. Requests with bot score >= threshold are allowed through.
 
-| Threshold | Description |
-|-----------|-------------|
-| 30 | Lenient - allows more traffic, blocks obvious bots |
-| 50 | Moderate - balanced approach |
-| 70 | Strict - blocks most bot-like traffic |
+### How Bot Scores Work
+
+Cloudflare Bot Management assigns a score from 1-99:
+
+| Score | Meaning |
+|-------|---------|
+| 1 | **Verified bot** - known crawler (Googlebot, etc.) |
+| 2-29 | **Likely automated** - probable bot traffic |
+| 30-49 | **Possibly automated** - suspicious but uncertain |
+| 50-69 | **Likely human** - probably legitimate traffic |
+| 70-99 | **Definitely human** - very high confidence |
+| 0 or -1 | **Error** - score couldn't be computed |
+
+**Lower score = more likely a bot. Higher score = more likely human.**
+
+### Choosing a Threshold
+
+The threshold determines which requests pass through without paying:
+
+| Threshold | Effect | Use Case |
+|-----------|--------|----------|
+| 30 | Blocks scores 1-29, allows 30+ | Lenient - only blocks obvious bots |
+| 50 | Blocks scores 1-49, allows 50+ | Moderate - blocks suspicious traffic |
+| 70 | Blocks scores 1-69, allows 70+ | Strict - only allows definite humans |
+
+**Recommended starting point: 30** - This blocks known bots and likely-automated traffic while allowing uncertain cases through. You can tighten later if needed.
 
 **This is REQUIRED** - there is no default value.
 
@@ -563,7 +584,15 @@ Exception met       No exception
 
 ### "Bot score is always 99"
 
-**Cause:** Bot Management is not enabled on this zone.
+**Meaning:** A score of 99 means "definitely human" - this traffic is legitimate and will pass through without paying (as expected).
+
+If you're seeing this on traffic you expect to be bots, possible causes:
+1. The crawler is using a residential proxy or human-like behavior
+2. Bot Management hasn't fully classified this traffic yet
+
+### "Bot score is missing or 0/-1"
+
+**Cause:** Bot Management is not enabled on this zone, or there was an error computing the score.
 
 **Fix:** Enable Enterprise Bot Management in the Cloudflare dashboard:
 Zone → Security → Bots → Configure Bot Management
