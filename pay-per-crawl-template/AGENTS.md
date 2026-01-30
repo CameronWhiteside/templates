@@ -77,23 +77,33 @@ If not logged in, run `npx wrangler login`.
 
 ## Step 2: Get Domain and Worker Name
 
-Ask the user: **What domain will this worker protect?**
+### 2.1 Get Available Domains
 
-Example: `willsguitars.com`
+First, list the user's Cloudflare zones:
 
-**Generate the worker name** by converting the domain to a slug:
+```bash
+npx wrangler zones list
+```
+
+This returns their available domains. Present these as options, or let them type their own.
+
+### 2.2 Ask Which Domain to Protect
+
+Ask the user: **Which domain will this worker protect?**
+
+(No pre-populated suggestions - use their actual zones from the command above, or let them type it.)
+
+### 2.3 Generate Worker Name
+
+Convert the domain to a worker name:
 - Replace `.` with `-`
 - Prefix with `pay-per-crawl-`
 
-| Domain | Worker Name |
-|--------|-------------|
-| `willsguitars.com` | `pay-per-crawl-willsguitars-com` |
-| `example.co.uk` | `pay-per-crawl-example-co-uk` |
-| `my-site.io` | `pay-per-crawl-my-site-io` |
+**Formula:** `pay-per-crawl-{domain.replace(/\./g, '-')}`
 
 Update `wrangler.jsonc`:
 ```jsonc
-"name": "pay-per-crawl-willsguitars-com",
+"name": "pay-per-crawl-{generated-name}",
 ```
 
 ---
