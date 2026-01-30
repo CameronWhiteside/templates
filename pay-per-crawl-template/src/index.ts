@@ -46,6 +46,23 @@ function shouldBypass(path: string, bypassPaths: string[]): boolean {
 }
 
 /**
+ * Check if a price is valid (minimum $0.01, whole cent increments).
+ */
+function isValidPrice(price: number): boolean {
+	if (price < 0.01) return false;
+	// Check for whole cent increments: multiply by 100 and verify it's an integer
+	const cents = Math.round(price * 100);
+	return Math.abs(price * 100 - cents) < 0.0001;
+}
+
+/**
+ * Convert USD price to cents (for internal use).
+ */
+function priceToCents(price: number): number {
+	return Math.round(price * 100);
+}
+
+/**
  * Validate a pricing rule.
  * Returns error message if invalid, null if valid.
  */
@@ -55,12 +72,15 @@ function validateRule(rule: PricingRule, index: number): string | null {
 		return `Rule ${index + 1}: 'pattern' is required and must be a string`;
 	}
 
-	// Price must be >= 1 cent and a whole number
-	if (typeof rule.price_cents !== "number" || rule.price_cents < 1) {
-		return `Rule ${index + 1}: 'price_cents' must be >= 1 (minimum $0.01)`;
+	// Price must be >= $0.01 and in whole cent increments
+	if (typeof rule.price !== "number") {
+		return `Rule ${index + 1}: 'price' is required (e.g., 0.50 for $0.50)`;
 	}
-	if (!Number.isInteger(rule.price_cents)) {
-		return `Rule ${index + 1}: 'price_cents' must be a whole number (no decimals)`;
+	if (rule.price < 0.01) {
+		return `Rule ${index + 1}: 'price' must be >= 0.01 (minimum $0.01)`;
+	}
+	if (!isValidPrice(rule.price)) {
+		return `Rule ${index + 1}: 'price' must be in whole cent increments (e.g., 0.01, 0.09, 0.50, 1.00)`;
 	}
 
 	// Bot score threshold is REQUIRED
@@ -75,7 +95,7 @@ function validateRule(rule: PricingRule, index: number): string | null {
 	if (rule.except_bots && Array.isArray(rule.except_bots)) {
 		for (const botName of rule.except_bots) {
 			if (!isBotNameSupported(botName)) {
-				return `Rule ${index + 1}: Unknown bot name "${botName}". Supported names: ${SUPPORTED_BOT_NAMES.slice(0, 5).join(", ")}... (see AGENTS.md for full list)`;
+				return `Rule ${index + 1}: Unknown bot name "${botName}". Supported names: ${SUPPORTED_BOT_NAMES.slice(0, 5).join(", ")}... (see bots.ts for full list)`;
 			}
 		}
 	}
@@ -146,10 +166,10 @@ function evaluateRules(
 }
 
 /**
- * Format price in cents to USD string.
+ * Format price (in USD) to standard string format.
  */
-function formatPriceUsd(priceCents: number): string {
-	return `USD ${(priceCents / 100).toFixed(2)}`;
+function formatPriceUsd(price: number): string {
+	return `USD ${price.toFixed(2)}`;
 }
 
 /**
@@ -193,11 +213,11 @@ export default {
 		// =========================================================================
 		const matchedRule = evaluateRules(path, botScore, isVerifiedBot, detectionIds, rules);
 
-		if (matchedRule) {
-			// Rule matched and no exception applied - return 402
-			const priceUsd = formatPriceUsd(matchedRule.price_cents);
+	if (matchedRule) {
+		// Rule matched and no exception applied - return 402
+		const priceUsd = formatPriceUsd(matchedRule.price);
 
-			return new Response(
+		return new Response(
 				JSON.stringify({
 					error: "Payment Required",
 					message: "This content requires payment for bot access.",
@@ -224,28 +244,28 @@ export default {
 		const cfPayPerCrawl = request.headers.get("cf-pay-per-crawl") || "";
 		const wantsInBandPricing = cfPayPerCrawl.includes("pricing=in-band");
 
-		if (wantsInBandPricing) {
-			// Find applicable price for this path (for informational header)
-			let contentPrice: number | null = null;
+	if (wantsInBandPricing) {
+		// Find applicable price for this path (for informational header)
+		let contentPrice: number | null = null;
 
-			for (const rule of rules) {
-				if (pathMatches(path, rule.pattern)) {
-					contentPrice = rule.price_cents;
-					break;
-				}
+		for (const rule of rules) {
+			if (pathMatches(path, rule.pattern)) {
+				contentPrice = rule.price;
+				break;
 			}
-
-			// Clone response and add Crawler-Price header
-			const newResponse = new Response(response.body, response);
-
-			if (contentPrice !== null) {
-				newResponse.headers.set("Crawler-Price", formatPriceUsd(contentPrice));
-			} else {
-				newResponse.headers.set("Crawler-Price", "USD 0.00");
-			}
-
-			return newResponse;
 		}
+
+		// Clone response and add Crawler-Price header
+		const newResponse = new Response(response.body, response);
+
+		if (contentPrice !== null) {
+			newResponse.headers.set("Crawler-Price", formatPriceUsd(contentPrice));
+		} else {
+			newResponse.headers.set("Crawler-Price", "USD 0.00");
+		}
+
+		return newResponse;
+	}
 
 		return response;
 	},

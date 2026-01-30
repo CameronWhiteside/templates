@@ -90,19 +90,19 @@ Ask the user which paths they want to charge for:
 
 ## Step 3: Set Price for Each Path
 
-For each path, determine the price in cents:
+For each path, determine the price in USD:
 
-| Price (cents) | USD Amount |
-|--------------|------------|
-| 1 | $0.01 |
-| 9 | $0.09 |
-| 25 | $0.25 |
-| 50 | $0.50 |
-| 100 | $1.00 |
+| Price | Description |
+|-------|-------------|
+| 0.01 | $0.01 (1 cent) - minimum |
+| 0.09 | $0.09 (9 cents) |
+| 0.25 | $0.25 (25 cents) |
+| 0.50 | $0.50 (50 cents) |
+| 1.00 | $1.00 (1 dollar) |
 
 **Constraints:**
-- Minimum: 1 cent ($0.01)
-- Must be whole numbers (no decimals)
+- Minimum: 0.01 ($0.01)
+- Must be whole cent increments (0.01, 0.02, ..., 0.50, 1.00)
 
 ---
 
@@ -140,17 +140,22 @@ Edit `wrangler.jsonc` with the gathered information:
 "PRICING_RULES": [
   {
     "pattern": "/blog/*",
-    "price_cents": 9,
+    "price": 0.09,
     "bot_score_threshold": 30,
     "except_bots": ["Googlebot", "BingBot"]
   },
   {
     "pattern": "/premium/*",
-    "price_cents": 50,
+    "price": 0.50,
     "bot_score_threshold": 50
   }
 ]
 ```
+
+For bot exceptions, you can also edit `src/bots.config.ts` which has preset combinations like:
+- `STANDARD_EXCEPTIONS` - Search engines only (Googlebot, BingBot, Applebot)
+- `PERMISSIVE_EXCEPTIONS` - Search engines + AI assistants
+- `NO_EXCEPTIONS` - Charge all bots
 
 ---
 
@@ -202,7 +207,7 @@ Users can add multiple rules for different paths with different prices. Simply a
   // Rule 1: Blog at $0.09
   {
     "pattern": "/blog/*",
-    "price_cents": 9,
+    "price": 0.09,
     "bot_score_threshold": 30,
     "except_bots": ["Googlebot"]
   },
@@ -210,14 +215,14 @@ Users can add multiple rules for different paths with different prices. Simply a
   // Rule 2: Premium API at $0.50
   {
     "pattern": "/api/premium/*",
-    "price_cents": 50,
+    "price": 0.50,
     "bot_score_threshold": 50
   },
   
   // Rule 3: Articles at $0.25
   {
     "pattern": "/articles/*",
-    "price_cents": 25,
+    "price": 0.25,
     "bot_score_threshold": 40,
     "except_bots": ["Googlebot", "BingBot", "Applebot"]
   }
@@ -247,11 +252,19 @@ No need to delete and recreate - just edit in place.
 ```typescript
 {
   pattern: string;           // Path pattern (required)
-  price_cents: number;       // Price in cents, >= 1 (required)
+  price: number;             // Price in USD, >= 0.01, whole cents (required)
   bot_score_threshold: number; // 0-100, allow if score >= this (required)
   except_bots?: string[];    // Bot names to always allow (optional)
 }
 ```
+
+### Files to Edit
+
+| File | Purpose |
+|------|---------|
+| `wrangler.jsonc` | Main config: routes, pricing rules, bypass paths |
+| `src/bots.config.ts` | Bot exception presets (easy to read/edit) |
+| `src/bots.ts` | Full bot registry with detection IDs (reference only) |
 
 ### Environment Variables
 
