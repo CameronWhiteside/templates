@@ -67,12 +67,6 @@ export interface Env {
 	 * Rules are evaluated in order - first match wins.
 	 */
 	PRICING_RULES?: PricingRule[];
-
-	/**
-	 * Paths that always pass through (never blocked).
-	 * Default: ["/robots.txt", "/crawlers.json", "/security.txt", "/.well-known/security.txt"]
-	 */
-	BYPASS_PATHS?: string[];
 }
 
 /**

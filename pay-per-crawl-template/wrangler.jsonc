@@ -2,6 +2,7 @@
  * Pay Per Crawl Worker - Configuration
  *
  * Block AI crawlers with HTTP 402 Payment Required unless they pay.
+ * Uses x402 v2.0.0 protocol format.
  *
  * PREREQUISITES:
  *   1. Enterprise Bot Management enabled
@@ -17,7 +18,7 @@
 	// WORKER NAME - Update for your domain
 	// =========================================================================
 	// Format: pay-per-crawl-{domain-slug}
-	// Example: pay-per-crawl-willsguitars-com
+	// Example: pay-per-crawl-example-com
 	//
 	"name": "pay-per-crawl-example-com",
 
@@ -34,11 +35,11 @@
 	//
 	// Format: "{domain}{pattern}"
 	//
-	// Example for willsguitars.com with /blog/* and /premium/* rules:
+	// Example for example.com with /blog/* and /premium/* rules:
 	//
 	// "routes": [
-	// 	{ "pattern": "willsguitars.com/blog/*", "zone_name": "willsguitars.com" },
-	// 	{ "pattern": "willsguitars.com/premium/*", "zone_name": "willsguitars.com" }
+	// 	{ "pattern": "example.com/blog/*", "zone_name": "example.com" },
+	// 	{ "pattern": "example.com/premium/*", "zone_name": "example.com" }
 	// ],
 
 	"vars": {
@@ -65,22 +66,6 @@
 				"bot_score_threshold": 30,
 				"except_bots": []
 			}
-		],
-
-		// =====================================================================
-		// BYPASS PATHS - Never blocked (within routed paths)
-		// =====================================================================
-		// If a request matches a route but also matches a bypass path,
-		// it passes through without blocking.
-		//
-		// Note: Paths NOT in routes above won't hit this worker at all.
-		//
-		"BYPASS_PATHS": [
-			"/robots.txt",
-			"/crawlers.json",
-			"/security.txt",
-			"/.well-known/security.txt",
-			"/ads.txt"
 		]
 	}
 }

@@ -339,9 +339,6 @@ npm run deploy
 # Test a protected path (should return 402 for bot-like requests)
 curl -I https://example.com/blog/test-post
 
-# Test a bypass path (should return 200)
-curl -I https://example.com/robots.txt
-
 # Check worker logs
 npx wrangler tail
 ```
@@ -446,17 +443,6 @@ Instead of a catch-all route (`example.com/*`), this template uses **one route p
 | Variable | Required | Description |
 |----------|----------|-------------|
 | `PRICING_RULES` | Yes | Array of pricing rules |
-| `BYPASS_PATHS` | No | Paths that always pass through |
-
-### Default Bypass Paths
-
-These paths always pass through without evaluation:
-
-- `/robots.txt`
-- `/crawlers.json`
-- `/security.txt`
-- `/.well-known/security.txt`
-- `/ads.txt`
 
 ---
 
@@ -511,34 +497,65 @@ Use these exact names in the `except_bots` array:
 Request arrives at Worker route
          │
          ▼
-    Is path in BYPASS_PATHS?
+    Bot Management data available?
     ┌────────┴────────┐
-   Yes               No
+   No                Yes
     │                 │
     ▼                 ▼
- Proxy to      Get bot data from cf.botManagement
- origin        (score, verifiedBot, detectionIds)
-                      │
-                      ▼
+ Log warning    Extract bot data (score, verifiedBot, detectionIds)
+ Pass through        │
+ to origin           ▼
+              In-band pricing header present?
+              (cf-pay-per-crawl: pricing=in-band)
+                     │
+              ┌──────┴──────┐
+             No            Yes
+              │             │
+              ▼             ▼
+         Log warning   Continue
+         Continue           │
+              └──────┬──────┘
+                     │
+                     ▼
               Evaluate PRICING_RULES in order
-                      │
-              ┌───────┴───────┐
-              │               │
-         Rule matches    No rule matches
-              │               │
-              ▼               ▼
-     Check exceptions    Proxy to origin
-     (verified bot,      (with optional
-      bot score,         Crawler-Price
-      except_bots)       header)
+                     │
+              ┌──────┴──────┐
+              │             │
+         Rule matches  No rule matches
+              │             │
+              ▼             ▼
+     Check exceptions  Proxy to origin
+     (verified bot,    (+ Crawler-Price header
+      bot score,        if in-band enabled)
+      except_bots)
               │
      ┌────────┴────────┐
 Exception met       No exception
      │                    │
      ▼                    ▼
  Proxy to            Return 402
- origin              with pricing
+ origin              (x402 v2.0.0 format)
 ```
+
+### 402 Response Format (x402 v2.0.0)
+
+```json
+{
+  "x402Version": "2.0.0",
+  "accepts": [{
+    "scheme": "deferred",
+    "network": "cloudflare:com",
+    "resource": "/path/from/request",
+    "amount": "0.50",
+    "asset": "USD"
+  }],
+  "error": "Payment is required to access content. Please refer to the Cloudflare Pay Per Crawl documentation for more information. https://developers.cloudflare.com/ai-crawl-control/features/pay-per-crawl/what-is-pay-per-crawl/"
+}
+```
+
+**Headers:**
+- `Content-Type: application/json`
+- `Crawler-Price: USD 0.50`
 
 ---
 
@@ -594,7 +611,7 @@ Before running `npm run deploy`, verify:
 
 - [ ] Prerequisites met (Enterprise Bot Management + PPC Beta)
 - [ ] At least one rule in `PRICING_RULES`
-- [ ] Each rule has `pattern`, `price_cents`, and `bot_score_threshold`
+- [ ] Each rule has `pattern`, `price`, and `bot_score_threshold`
 - [ ] All `except_bots` names are from the supported list
 - [ ] Routes configured with correct `pattern` and `zone_name`
 - [ ] No other worker owns the target routes
