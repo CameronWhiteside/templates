@@ -170,34 +170,30 @@ Ask the user: **What price do you want to set for each path?**
 
 ## Step 5: Set Bot Score Threshold
 
-For each path, determine the threshold. Requests with bot score >= threshold are allowed through.
+For each path, determine the threshold. Requests with bot score <= threshold are blocked with 402.
 
 ### How Bot Scores Work
 
-Cloudflare Bot Management assigns a score from 1-99:
+Cloudflare Bot Management assigns a score from 1-99. **Lower = more likely a bot.**
 
 | Score | Meaning |
 |-------|---------|
-| 1 | **Verified bot** - known crawler (Googlebot, etc.) |
-| 2-29 | **Likely automated** - probable bot traffic |
-| 30-49 | **Possibly automated** - suspicious but uncertain |
-| 50-69 | **Likely human** - probably legitimate traffic |
-| 70-99 | **Definitely human** - very high confidence |
-| 0 or -1 | **Error** - score couldn't be computed |
-
-**Lower score = more likely a bot. Higher score = more likely human.**
+| 1 | Known automated (verified bots) |
+| 2-29 | Almost certainly automated |
+| 30-49 | Likely automated |
+| 50+ | Likely human |
 
 ### Choosing a Threshold
 
-The threshold determines which requests pass through without paying:
+The threshold determines which traffic gets blocked (must pay):
 
-| Threshold | Effect |
+| Threshold | Blocks |
 |-----------|--------|
-| 1 | Requires payment from all bots including verified |
-| 2 | Allows only verified bots (score 1), all others pay |
-| 30 | Allows likely-human traffic (30+), obvious bots pay |
+| 1 | Known automated only (score = 1) |
+| 2 | Almost certainly automated (score <= 2) |
+| 30 | Likely automated (score <= 30) |
 
-**Recommended starting point: 30** - Blocks known bots and likely-automated traffic while allowing uncertain cases through.
+**Recommended starting point: 30** - Blocks known bots and likely-automated traffic.
 
 **This is REQUIRED** - there is no default value.
 
