@@ -1,0 +1,105 @@
+/**
+ * Pay Per Crawl Worker Template - Wrangler Configuration
+ *
+ * This template implements path-based pricing for AI crawlers.
+ * It consolidates the "Default Closed" setup (Worker + WAF rule) into a single Worker.
+ *
+ * @see AGENTS.md for detailed setup instructions
+ * @see https://developers.cloudflare.com/workers/wrangler/configuration/
+ */
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "pay-per-crawl-template",
+	"main": "src/index.ts",
+	"compatibility_date": "2026-01-30",
+	"observability": {
+		"enabled": true,
+	},
+
+	// =========================================================================
+	// ⚠️  PREREQUISITES - READ BEFORE DEPLOYING
+	// =========================================================================
+	// This template REQUIRES both of the following to function correctly:
+	//
+	//   1. Enterprise Bot Management - Must be enabled on your zone
+	//   2. Pay Per Crawl Beta - Must be enabled for your account
+	//
+	// WITHOUT THESE PREREQUISITES:
+	//   - The worker will NOT block any crawlers
+	//   - Bot score will always be 99 (no detection)
+	//   - All traffic will pass through unblocked
+	//   - You may see unexpected behavior
+	//
+	// To verify: Check AI Crawl Control → Settings in the Cloudflare Dashboard
+	// =========================================================================
+
+	// =========================================================================
+	// ROUTES - Configure for your zone
+	// =========================================================================
+	// Uncomment and edit to deploy on your domain.
+	// The worker intercepts all requests matching these patterns.
+	//
+	// "routes": [
+	// 	{
+	// 		"pattern": "example.com/*",
+	// 		"zone_name": "example.com",
+	// 	},
+	// ],
+
+	"vars": {
+		// =====================================================================
+		// PRICING_RULES - Define path-based pricing (REQUIRED)
+		// =====================================================================
+		// Add one or more rules to protect different paths with different prices.
+		// Rules are evaluated in order - first matching rule wins.
+		//
+		// Each rule has:
+		//   - pattern: Path to protect
+		//       * Exact match: "/api/premium"
+		//       * Prefix match: "/blog/*"
+		//
+		//   - price_cents: Price in cents (minimum 1, whole numbers only)
+		//       * 1 = $0.01
+		//       * 9 = $0.09
+		//       * 100 = $1.00
+		//
+		//   - bot_score_threshold: REQUIRED - Allow requests with score >= this
+		//       * 30 = lenient (allows more bot-like traffic)
+		//       * 50 = moderate
+		//       * 70 = strict (blocks most bot-like traffic)
+		//
+		//   - except_bots: (optional) Bot names to always allow
+		//       * Use readable names: ["Googlebot", "BingBot"]
+		//       * See AGENTS.md for full list of supported names
+		//
+		"PRICING_RULES": [
+			{
+				"pattern": "/blog/*",
+				"price_cents": 9,
+				"bot_score_threshold": 30,
+				"except_bots": ["Googlebot", "BingBot"],
+			},
+			{
+				"pattern": "/premium/*",
+				"price_cents": 50,
+				"bot_score_threshold": 50,
+			},
+		],
+
+		// =====================================================================
+		// BYPASS_PATHS - Paths that always pass through (optional)
+		// =====================================================================
+		// These paths are never blocked, regardless of bot score.
+		// Default includes common crawler-friendly paths.
+		//
+		"BYPASS_PATHS": [
+			"/robots.txt",
+			"/crawlers.json",
+			"/security.txt",
+			"/.well-known/security.txt",
+			"/ads.txt",
+		],
+	},
+
+	"upload_source_maps": true,
+}
