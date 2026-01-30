@@ -53,60 +53,93 @@
  */
 
 // ---------------------------------------------------------------------------
-// SEARCH ENGINE BOTS - Allow for SEO
+// SEARCH ENGINE BOTS
 // ---------------------------------------------------------------------------
-// These bots help your site appear in search results.
-// Most sites want to allow these.
+// These bots index your site for search results.
+// Allowing them maintains SEO visibility.
 
 export const SEARCH_ENGINE_BOTS = [
-	"Googlebot",
-	"BingBot",
-	"Applebot",
+	"Googlebot",        // Google Search
+	"BingBot",          // Microsoft Bing
+	"Applebot",         // Apple Search / Siri
 ] as const;
 
 // ---------------------------------------------------------------------------
-// AI ASSISTANT BOTS - Allow for user experience
+// AI ASSISTANT BOTS
 // ---------------------------------------------------------------------------
-// These bots fetch content in real-time when users ask questions.
+// These fetch content in real-time when users ask questions.
 // Allowing them means your content can be cited in AI answers.
 
 export const AI_ASSISTANT_BOTS = [
-	"ChatGPT-User",
-	"Claude-User",
-	"Perplexity-User",
-	// "MistralAI-User",
-	// "DuckAssistBot",
+	"ChatGPT-User",     // ChatGPT browsing mode
+	"Claude-User",      // Claude web access
+	"Perplexity-User",  // Perplexity answers
+	"MistralAI-User",   // Mistral chat
+	"DuckAssistBot",    // DuckDuckGo AI
+	"Meta-ExternalFetcher", // Meta AI assistant
 ] as const;
 
 // ---------------------------------------------------------------------------
-// AI CRAWLER BOTS - Usually want to charge/block
+// AI SEARCH BOTS
 // ---------------------------------------------------------------------------
-// These bots collect training data. You probably want to charge them.
-// Uncomment any you want to allow for free.
+// AI-powered search engines that may cite/link to your content.
 
-export const AI_CRAWLER_BOTS = [
-	// "GPTBot",           // OpenAI training
-	// "ClaudeBot",        // Anthropic training
-	// "CCBot",            // Common Crawl
-	// "Bytespider",       // ByteDance
-	// "Meta-ExternalAgent", // Meta AI
+export const AI_SEARCH_BOTS = [
+	"OAI-SearchBot",    // OpenAI SearchGPT
+	"PerplexityBot",    // Perplexity search crawler
+	"Claude-SearchBot", // Anthropic search
 ] as const;
 
 // ---------------------------------------------------------------------------
-// PRESET COMBINATIONS - Use these in wrangler.jsonc
+// AI TRAINING CRAWLERS
 // ---------------------------------------------------------------------------
+// These collect content for AI model training.
+
+export const AI_TRAINING_BOTS = [
+	"GPTBot",           // OpenAI training
+	"ClaudeBot",        // Anthropic training
+	"CCBot",            // Common Crawl dataset
+	"Google-CloudVertexBot", // Google AI training
+	"Meta-ExternalAgent",    // Meta AI training
+	"Amazonbot",        // Amazon AI
+	"Bytespider",       // ByteDance / TikTok
+	"PetalBot",         // Huawei
+	"FacebookBot",      // Meta crawling
+] as const;
+
+// ---------------------------------------------------------------------------
+// ARCHIVER BOTS
+// ---------------------------------------------------------------------------
+// Web archiving services that preserve content.
+
+export const ARCHIVER_BOTS = [
+	"archive.org_bot",  // Internet Archive / Wayback Machine
+] as const;
+
+// ---------------------------------------------------------------------------
+// OTHER BOTS
+// ---------------------------------------------------------------------------
+
+export const OTHER_BOTS = [
+	"ChatGPT agent",    // ChatGPT agents/plugins
+	"Novellum AI Crawl", // Novellum AI
+	"Timpibot",         // Timpi search
+	"ProRataInc",       // ProRata content licensing
+	"Anchor Browser",   // Anchor AI browser
+] as const;
+
+// ---------------------------------------------------------------------------
+// PRESET COMBINATIONS
+// ---------------------------------------------------------------------------
+// Use these as starting points, or build your own from the arrays above.
 
 /**
- * Standard exceptions: Search engines only.
- * Use this if you want to charge AI bots but maintain SEO.
+ * Search engines only - maintains SEO visibility.
  */
-export const STANDARD_EXCEPTIONS = [
-	...SEARCH_ENGINE_BOTS,
-] as const;
+export const STANDARD_EXCEPTIONS = [...SEARCH_ENGINE_BOTS] as const;
 
 /**
- * Permissive exceptions: Search engines + AI assistants.
- * Use this if you want your content cited in AI answers.
+ * Search engines + AI assistants - allows real-time citations.
  */
 export const PERMISSIVE_EXCEPTIONS = [
 	...SEARCH_ENGINE_BOTS,
@@ -114,7 +147,6 @@ export const PERMISSIVE_EXCEPTIONS = [
 ] as const;
 
 /**
- * Strict: No exceptions.
- * Use this if you want to charge ALL bots.
+ * No exceptions - all bots subject to pricing.
  */
 export const NO_EXCEPTIONS: string[] = [];

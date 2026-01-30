@@ -157,19 +157,14 @@ Ask the user which paths they want to charge for:
 
 ## Step 4: Set Price for Each Path
 
-For each path, determine the price in USD:
+Ask the user: **What price do you want to set for each path?**
 
-| Price | Description |
-|-------|-------------|
-| 0.01 | $0.01 (1 cent) - minimum |
-| 0.09 | $0.09 (9 cents) |
-| 0.25 | $0.25 (25 cents) |
-| 0.50 | $0.50 (50 cents) |
-| 1.00 | $1.00 (1 dollar) |
+**Format requirements:**
+- Enter as a decimal number in USD (e.g., `0.25` for 25 cents, `1.00` for one dollar)
+- Minimum: `0.01` (one cent)
+- Must be whole cent increments
 
-**Constraints:**
-- Minimum: 0.01 ($0.01)
-- Must be whole cent increments (0.01, 0.02, ..., 0.50, 1.00)
+**Do NOT suggest specific prices.** Pricing strategy is entirely up to the publisher.
 
 ---
 
@@ -187,15 +182,96 @@ For each path, determine the threshold. Requests with bot score >= threshold are
 
 ---
 
-## Step 6: Add Bot Exceptions (Optional)
+## Step 6: Add Bot Exceptions
 
-If the user wants specific bots to always pass through (e.g., allow Googlebot for SEO), add them to `except_bots`.
+Help the user decide which bots should be allowed through WITHOUT paying. Ask these questions in order:
 
-**If the user specifies a bot name that isn't recognized**, ask:
+### Question 1: Search Engine Visibility
 
-1. "Should we match on User-Agent string instead?"
+**"Do you want search engines to index this content for SEO?"**
+
+If YES, add these to `except_bots`:
+| Bot | Operator | Purpose |
+|-----|----------|---------|
+| `Googlebot` | Google | Google Search indexing |
+| `BingBot` | Microsoft | Bing Search indexing |
+| `Applebot` | Apple | Apple Search / Siri |
+
+### Question 2: AI Assistant Citations
+
+**"Do you want AI assistants to cite your content when users ask questions in real-time?"**
+
+(These fetch content live when a user asks a question, and may cite/link back to you)
+
+If YES, add these to `except_bots`:
+| Bot | Operator | Purpose |
+|-----|----------|---------|
+| `ChatGPT-User` | OpenAI | ChatGPT browsing mode |
+| `Claude-User` | Anthropic | Claude web access |
+| `Perplexity-User` | Perplexity | Perplexity answers |
+| `MistralAI-User` | Mistral | Mistral chat |
+| `DuckAssistBot` | DuckDuckGo | DuckDuckGo AI answers |
+| `Meta-ExternalFetcher` | Meta | Meta AI assistant |
+
+### Question 3: AI Search Engines
+
+**"Do you want AI-powered search engines to include your content in search results?"**
+
+If YES, add these to `except_bots`:
+| Bot | Operator | Purpose |
+|-----|----------|---------|
+| `OAI-SearchBot` | OpenAI | SearchGPT |
+| `PerplexityBot` | Perplexity | Perplexity search crawler |
+| `Claude-SearchBot` | Anthropic | Claude search |
+
+### Question 4: AI Training Crawlers
+
+**"Do you want AI companies to crawl your content for model training?"**
+
+(Most publishers say NO here - this is the content they typically want to charge for)
+
+If YES, add these to `except_bots`:
+| Bot | Operator | Purpose |
+|-----|----------|---------|
+| `GPTBot` | OpenAI | OpenAI training data |
+| `ClaudeBot` | Anthropic | Anthropic training data |
+| `CCBot` | Common Crawl | Common Crawl dataset |
+| `Google-CloudVertexBot` | Google | Google AI training |
+| `Meta-ExternalAgent` | Meta | Meta AI training |
+| `Amazonbot` | Amazon | Amazon AI training |
+| `Bytespider` | ByteDance | ByteDance/TikTok AI |
+| `PetalBot` | Huawei | Huawei AI |
+| `FacebookBot` | Meta | Meta crawling |
+
+### Question 5: Web Archives
+
+**"Do you want your content preserved in web archives like the Internet Archive?"**
+
+If YES, add to `except_bots`:
+| Bot | Operator | Purpose |
+|-----|----------|---------|
+| `archive.org_bot` | Internet Archive | Wayback Machine |
+
+### Question 6: Other Bots
+
+**"Are there any other specific bots you want to allow?"**
+
+Additional available bots:
+| Bot | Operator | Purpose |
+|-----|----------|---------|
+| `ChatGPT agent` | OpenAI | ChatGPT agents/plugins |
+| `Novellum AI Crawl` | Novellum | Novellum AI |
+| `Timpibot` | Timpi | Timpi search |
+| `ProRataInc` | ProRata.ai | ProRata content licensing |
+| `Anchor Browser` | Anchor | Anchor AI browser |
+
+### If User Mentions an Unrecognized Bot
+
+Ask:
+1. "Do you have the exact bot name or User-Agent string?"
 2. "Do you have a Cloudflare detection ID for this bot?"
-3. "Is there another way we can identify this crawler?"
+
+See `src/bots.ts` for the full registry with detection IDs.
 
 ---
 
@@ -229,25 +305,20 @@ Example for `willsguitars.com` with `/blog/*` and `/premium/*`:
 ```jsonc
 "PRICING_RULES": [
   {
-    "pattern": "/blog/*",
-    "price": 0.09,
-    "bot_score_threshold": 30,
-    "except_bots": ["Googlebot", "BingBot"]
-  },
-  {
-    "pattern": "/premium/*",
-    "price": 0.50,
-    "bot_score_threshold": 50
+    "pattern": "/path-from-step-3/*",
+    "price": /* user's price from Step 4 */,
+    "bot_score_threshold": /* threshold from Step 5 */,
+    "except_bots": [/* bots from Step 6 */]
   }
 ]
 ```
 
 **Each PRICING_RULE pattern must have a matching route!**
 
-For bot exceptions, you can also edit `src/bots.config.ts` which has preset combinations like:
-- `STANDARD_EXCEPTIONS` - Search engines only (Googlebot, BingBot, Applebot)
+For bot exceptions, you can also edit `src/bots.config.ts` which has preset combinations:
+- `STANDARD_EXCEPTIONS` - Search engines only
 - `PERMISSIVE_EXCEPTIONS` - Search engines + AI assistants
-- `NO_EXCEPTIONS` - Charge all bots
+- `NO_EXCEPTIONS` - No free access
 
 ---
 
@@ -283,25 +354,25 @@ Users can add multiple rules for different paths with different prices. Simply a
 
 ```jsonc
 "PRICING_RULES": [
-  // Rule 1: Blog at $0.09
+  // Rule 1: Blog content
   {
     "pattern": "/blog/*",
-    "price": 0.09,
+    "price": /* your price */,
     "bot_score_threshold": 30,
-    "except_bots": ["Googlebot"]
+    "except_bots": ["Googlebot", "BingBot"]
   },
   
-  // Rule 2: Premium API at $0.50
+  // Rule 2: Premium API (different price/threshold)
   {
     "pattern": "/api/premium/*",
-    "price": 0.50,
+    "price": /* your price */,
     "bot_score_threshold": 50
   },
   
-  // Rule 3: Articles at $0.25
+  // Rule 3: Articles (allow more bots)
   {
     "pattern": "/articles/*",
-    "price": 0.25,
+    "price": /* your price */,
     "bot_score_threshold": 40,
     "except_bots": ["Googlebot", "BingBot", "Applebot"]
   }
@@ -309,6 +380,8 @@ Users can add multiple rules for different paths with different prices. Simply a
 ```
 
 **Rules are evaluated in order** - the first matching rule wins.
+
+Different paths can have different prices, thresholds, and bot exceptions based on content value and your business needs.
 
 ---
 

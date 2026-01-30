@@ -51,24 +51,19 @@
 		// IMPORTANT: Each pattern here needs a matching route above!
 		//
 		// Each rule needs:
-		//   pattern            - Path to protect ("/blog/*" or "/api/premium")
-		//   price              - Price in USD (0.09 = $0.09, minimum 0.01)
+		//   pattern             - Path to protect ("/blog/*" or "/api/premium")
+		//   price               - Price in USD (minimum 0.01, whole cents)
 		//   bot_score_threshold - Allow if bot score >= this (30-70 typical)
-		//   except_bots        - (optional) Bot names to always allow
+		//   except_bots         - (optional) Bot names to always allow
 		//
-		// Bot exceptions: edit src/bots.config.ts for presets
+		// Bot exceptions: see AGENTS.md for guided selection, or edit src/bots.config.ts
 		//
 		"PRICING_RULES": [
 			{
-				"pattern": "/blog/*",
-				"price": 0.09,
+				"pattern": "/content/*",
+				"price": 0.01,
 				"bot_score_threshold": 30,
-				"except_bots": ["Googlebot", "BingBot"]
-			},
-			{
-				"pattern": "/premium/*",
-				"price": 0.50,
-				"bot_score_threshold": 50
+				"except_bots": []
 			}
 		],
 
