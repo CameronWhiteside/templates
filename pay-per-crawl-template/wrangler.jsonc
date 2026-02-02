@@ -10,6 +10,11 @@
  *
  * Without these, the worker won't block anything.
  * Check: AI Crawl Control → Settings in dashboard
+ *
+ * BUILD PROCESS:
+ *   The PRICING_RULES below are transformed into src/config.json by the build script.
+ *   Run `npm run build:config` to regenerate, or `npm run deploy` (which runs it automatically).
+ *   src/config.json is gitignored - it's generated on each build.
  */
 {
 	"$schema": "node_modules/wrangler/config-schema.json",
@@ -44,7 +49,7 @@
 
 	"vars": {
 		// =====================================================================
-		// PRICING RULES
+		// PRICING RULES (Input for build script)
 		// =====================================================================
 		// Define which paths to protect and at what price.
 		// Rules are checked in order - first match wins.
@@ -54,11 +59,14 @@
 		// Each rule needs:
 		//   pattern               - Path to protect ("/blog/*" or "/api/premium")
 		//   price                 - Price in USD (minimum 0.01, whole cents - SYSTEM REQUIREMENT)
-		//   bot_score_threshold   - Allow if bot score >= this (30-70 typical)
+		//   bot_score_threshold   - Allow if bot score >= this (1, 2, or 30 recommended)
 		//   except_bots           - (optional) Bot names to always allow (see bots.ts)
 		//   except_detection_ids  - (optional) Raw detection IDs to always allow
+		//   enabled               - (optional) Whether rule is active (default: true)
 		//
-		// Bot exceptions: see AGENTS.md for guided selection, or edit src/bots.config.ts
+		// Bot names: "Googlebot", "BingBot", "GPTBot", "ChatGPT-User", etc.
+		//            See src/bots.ts for full list. Names are resolved to IDs at build time.
+		//
 		// Detection IDs: Find in dashboard → AI Crawl Control → Crawlers → Actions menu
 		//
 		// PRICING NOTE: $0.01 minimum and whole cents are Pay Per Crawl SYSTEM requirements.
@@ -69,7 +77,7 @@
 				"pattern": "/content/*",
 				"price": 1.00,
 				"bot_score_threshold": 30,
-				"except_bots": [],
+				"except_bots": ["Googlebot", "BingBot"],
 				"except_detection_ids": []
 			}
 		]

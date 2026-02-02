@@ -4,8 +4,9 @@
 	"description": "Cloudflare Worker template for pay-per-crawl pricing on AI crawler traffic",
 	"private": true,
 	"scripts": {
-		"dev": "wrangler dev",
-		"deploy": "wrangler deploy",
+		"build:config": "tsx scripts/build-config.ts",
+		"dev": "npm run build:config && wrangler dev",
+		"deploy": "npm run build:config && wrangler deploy",
 		"tail": "wrangler tail",
 		"types": "wrangler types"
 	},
@@ -19,6 +20,7 @@
 	],
 	"devDependencies": {
 		"@cloudflare/workers-types": "^4.20250124.0",
+		"tsx": "^4.7.0",
 		"typescript": "^5.7.3",
 		"wrangler": "^3.105.0"
 	}

@@ -72,12 +72,117 @@
 		//
 		// After payment, users get a JWT cookie valid for 1 hour.
 		//
+		// ─────────────────────────────────────────────────────────────────────
+		// BOT MANAGEMENT FILTERING (Optional - requires Cloudflare Bot Management)
+		// ─────────────────────────────────────────────────────────────────────
+		// With Bot Management enabled, you can add:
+		//   - bot_score_threshold: Score at or below which payment is required
+		//   - except_detection_ids: Detection IDs of bots that access FREE
+		//
+		// This enables "default closed" - humans pass free, bots must pay.
+		//
 		"PROTECTED_PATTERNS": [
+			// ─────────────────────────────────────────────────────────────────
+			// Example 1: Basic - All traffic must pay (no Bot Management)
+			// ─────────────────────────────────────────────────────────────────
 			{
 				"pattern": "/premium/*",
 				"price": "$0.01",
-				"description": "Access to premium content for 1 hour",
-			},
+				"description": "Access to premium content for 1 hour"
+			}
+
+			// ─────────────────────────────────────────────────────────────────
+			// Example 2: Bot Management Filtering - Humans Free
+			// ─────────────────────────────────────────────────────────────────
+			// Uncomment to enable. Requires Bot Management on your zone.
+			//
+			// {
+			// 	"pattern": "/api/data/*",
+			// 	"price": "$0.10",
+			// 	"description": "API access for 1 hour",
+			// 	// ─────────────────────────────────────────────────────────────
+			// 	// Bot Management Filtering:
+			// 	// - Humans (bot score > 30) access for FREE
+			// 	// - Bots (bot score <= 30) must pay $0.10
+			// 	// ─────────────────────────────────────────────────────────────
+			// 	"bot_score_threshold": 30
+			// }
+
+			// ─────────────────────────────────────────────────────────────────
+			// Example 3: Bot Management Filtering - Humans + Search Engines Free
+			// ─────────────────────────────────────────────────────────────────
+			// Uncomment to enable. Requires Bot Management on your zone.
+			//
+			// {
+			// 	"pattern": "/content/*",
+			// 	"price": "$0.25",
+			// 	"description": "Content access for 1 hour",
+			// 	// ─────────────────────────────────────────────────────────────
+			// 	// Bot Management Filtering:
+			// 	// - Humans (bot score > 30) access for FREE
+			// 	// - Search engines (listed below) access for FREE
+			// 	// - All other bots (score <= 30) must pay $0.25
+			// 	// ─────────────────────────────────────────────────────────────
+			// 	"bot_score_threshold": 30,
+			// 	"except_detection_ids": [
+			// 		120623194,  // Googlebot - maintains Google Search visibility
+			// 		117479730,  // BingBot - maintains Bing Search visibility
+			// 		120424214   // Applebot - maintains Apple/Siri visibility
+			// 	]
+			// }
+
+			// ─────────────────────────────────────────────────────────────────
+			// Example 4: Bot Management Filtering - Search + AI Assistants Free
+			// ─────────────────────────────────────────────────────────────────
+			// Uncomment to enable. Requires Bot Management on your zone.
+			// This allows your content to be cited in AI assistant answers.
+			//
+			// {
+			// 	"pattern": "/articles/*",
+			// 	"price": "$0.50",
+			// 	"description": "Article access for 1 hour",
+			// 	// ─────────────────────────────────────────────────────────────
+			// 	// Bot Management Filtering:
+			// 	// - Humans (bot score > 30) access for FREE
+			// 	// - Search engines access for FREE (SEO visibility)
+			// 	// - AI assistants access for FREE (content citations)
+			// 	// - All other bots must pay $0.50
+			// 	// ─────────────────────────────────────────────────────────────
+			// 	"bot_score_threshold": 30,
+			// 	"except_detection_ids": [
+			// 		// Search Engines
+			// 		120623194,  // Googlebot - Google Search
+			// 		117479730,  // BingBot - Microsoft Bing
+			// 		120424214,  // Applebot - Apple Search / Siri
+			// 		// AI Assistants
+			// 		132995013,  // ChatGPT-User - ChatGPT browsing mode
+			// 		128950951,  // MistralAI-User - Mistral chat
+			// 		126666910,  // DuckAssistBot - DuckDuckGo AI
+			// 		132272919   // Meta-ExternalFetcher - Meta AI assistant
+			// 	]
+			// }
+
+			// ─────────────────────────────────────────────────────────────────
+			// Example 5: Strict Bot Management Filtering
+			// ─────────────────────────────────────────────────────────────────
+			// Very strict threshold (2) - only clear human traffic passes free.
+			// Use for high-value API endpoints.
+			//
+			// {
+			// 	"pattern": "/api/premium/*",
+			// 	"price": "$1.00",
+			// 	"description": "Premium API access for 1 hour",
+			// 	// ─────────────────────────────────────────────────────────────
+			// 	// Strict Bot Management Filtering:
+			// 	// - Only clear humans (bot score > 2) access for FREE
+			// 	// - Only Googlebot is excepted (for API documentation indexing)
+			// 	// - All other traffic must pay $1.00
+			// 	// ─────────────────────────────────────────────────────────────
+			// 	"bot_score_threshold": 2,
+			// 	"except_detection_ids": [
+			// 		120623194   // Googlebot - for API docs indexing
+			// 	]
+			// }
 		],
 		// =====================================================================
 		// ORIGIN_URL - External origin URL (OPTIONAL)
