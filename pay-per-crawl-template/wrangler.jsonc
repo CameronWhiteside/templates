@@ -33,6 +33,24 @@
 	"upload_source_maps": true,
 
 	// =========================================================================
+	// BUNDLING CONFIG - Keep config.json as separate module
+	// =========================================================================
+	// no_bundle: true would prevent all bundling, but we want TypeScript compiled.
+	// Instead, we use find_additional_modules to include config.json as a separate module.
+	//
+	// This allows the Cloudflare dashboard to parse config.json directly from the
+	// deployed worker's modules (it looks for files['config.json']).
+	//
+	"find_additional_modules": true,
+	"rules": [
+		{
+			"type": "Data",
+			"globs": ["**/*.json"],
+			"fallthrough": true
+		}
+	],
+
+	// =========================================================================
 	// ROUTES - One route per priced path
 	// =========================================================================
 	// IMPORTANT: Add a route for EACH path pattern in PRICING_RULES.

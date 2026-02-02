@@ -190,11 +190,16 @@ export interface PayPerCrawlConfig {
 
 /**
  * Bot management data from Cloudflare's cf object.
+ *
+ * Note: detectionIds can come in two formats from Cloudflare:
+ *   - Array: [123456, 789012]
+ *   - Object: {123456: true, 789012: true}
+ * The worker code handles both.
  */
 export interface BotManagement {
 	score?: number;
 	verifiedBot?: boolean;
-	detectionIds?: number[];
+	detectionIds?: number[] | Record<number, boolean>;
 }
 
 /**

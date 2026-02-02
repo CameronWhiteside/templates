@@ -82,7 +82,17 @@ export default {
 		// Extract bot data
 		const botScore = botManagement.score ?? 99;
 		const isVerifiedBot = botManagement.verifiedBot ?? false;
-		const detectionIds = (botManagement.detectionIds ?? []).map(String);
+
+		// detectionIds can be an array OR an object like {123: true, 456: true}
+		// Handle both formats safely
+		const rawDetectionIds = botManagement.detectionIds;
+		let detectionIds: string[] = [];
+		if (Array.isArray(rawDetectionIds)) {
+			detectionIds = rawDetectionIds.map(String);
+		} else if (rawDetectionIds && typeof rawDetectionIds === 'object') {
+			// Object format: keys are the detection IDs
+			detectionIds = Object.keys(rawDetectionIds);
+		}
 
 		// Check for in-band pricing header
 		const cfPayPerCrawl = request.headers.get("cf-pay-per-crawl") || "";
