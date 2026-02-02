@@ -61,7 +61,7 @@ export function formatCrawlerPrice(priceUsd: number): string {
  *   "x402Version": "2.0.0",
  *   "accepts": [{
  *     "scheme": "deferred",
- *     "network": "cloudflare:com",
+ *     "network": "cloudflare:402",
  *     "resource": "/path/from/request",
  *     "amount": "0.50",
  *     "asset": "USD"

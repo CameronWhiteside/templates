@@ -83,11 +83,14 @@ This installs wrangler and TypeScript dependencies needed for the template.
 
 ---
 
-## Step 2: Select Domain
+## Step 2: Select Domain and Confirm Account
 
-Ask: **"Which domain do you want to set up Pay Per Crawl for?"**
+> **Ask these together in a single prompt:**
 
-Let the user provide the domain name directly. If they have multiple Cloudflare accounts, ask which account first.
+1. **"Which domain do you want to set up Pay Per Crawl for?"**
+2. **"Which Cloudflare account is this domain on?"** (if user has multiple accounts from `wrangler whoami`)
+
+Let the user provide the domain name directly. If they have multiple Cloudflare accounts, confirm which account contains this domain.
 
 Confirm the domain is on an **Enterprise plan** with **Bot Management enabled** before proceeding.
 
@@ -104,22 +107,28 @@ Worker names: lowercase alphanumeric and hyphens only. Replace `.` with `-`, pre
 
 ---
 
-## Step 3: Identify Paths to Protect
+## Step 3: Collect All Path Patterns
 
-Now that the domain is confirmed, ask: **"Which URL paths do you want to charge for?"**
+> **Ask for ALL paths at once before configuring pricing:**
+
+Ask: **"Which URL paths do you want to charge for? List all of them."**
 
 Examples:
 - `/blog/*` - All blog content
 - `/articles/*` - Article pages
 - `/api/premium/*` - Premium API endpoints
 
-**Save these paths** - you'll need them for both PRICING_RULES and routes.
+**Save this list** - you'll configure each path individually in the next step.
 
 ---
 
-## Step 4: Set Price for Each Path
+## Step 4: Configure Each Path (Iterate)
 
-Ask the user: **What price do you want to set for each path?**
+> **For EACH path from Step 3, ask for these settings one path at a time:**
+
+### 4.1 Price
+
+Ask: **"What price (in USD) for `{path}`?"**
 
 **Format requirements:**
 - Enter as a decimal number in USD (e.g., `0.25` for 25 cents, `1.00` for one dollar)
@@ -128,112 +137,51 @@ Ask the user: **What price do you want to set for each path?**
 
 **Do NOT suggest specific prices.** Pricing strategy is entirely up to the publisher.
 
-### Why These Pricing Constraints?
+> **IMPORTANT:** The $0.01 minimum and whole cent requirement are **Pay Per Crawl system-level constraints**, not just template validation. Prices below $0.01 will not be enforced. Fractional cent prices may cause inconsistent behavior.
 
-> **IMPORTANT:** The $0.01 minimum and whole cent requirement are **Pay Per Crawl system-level constraints**, not just template validation. These are enforced by Cloudflare's infrastructure.
->
-> If prices are configured outside these bounds (e.g., by editing the validation code):
-> - Prices below $0.01 may not trigger 402 responses when they should
-> - Fractional cent prices may cause inconsistent blocking behavior
-> - The dashboard and worker may behave differently
->
-> **Do not attempt to bypass these constraints.** They exist because the payment infrastructure requires them.
+### 4.2 Bot Score Threshold
 
----
+Ask: **"What bot score threshold for `{path}`?"**
 
-## Step 5: Set Bot Score Threshold
+**ALWAYS offer exactly these three options:**
 
-For each path, determine the threshold. Requests with bot score <= threshold are blocked with 402.
+| Option | Threshold | What it blocks |
+|--------|-----------|----------------|
+| **1** | 1 | Only verified bots (score = 1) |
+| **2** | 2 | Known automated traffic (score ≤ 2) |
+| **30 (Recommended)** | 30 | Likely automated traffic (score ≤ 30) |
 
-### How Bot Scores Work
+**Recommended: 30** - This is the typical starting point that blocks known bots and likely-automated traffic while allowing humans through.
 
-Cloudflare Bot Management assigns a score from 1-99. **Lower = more likely a bot.**
+### 4.3 Bot Exceptions (Optional)
 
-| Score | Meaning |
-|-------|---------|
-| 1 | Known automated (verified bots) |
-| 2-29 | Almost certainly automated |
-| 30-49 | Likely automated |
-| 50+ | Likely human |
+Ask: **"Any bots that should get FREE access to `{path}`?"**
 
-### Choosing a Threshold
+Offer these preset options:
+- **Search engines only** - `Googlebot`, `BingBot`, `Applebot` (maintains SEO)
+- **Search + AI assistants** - Also includes `ChatGPT-User`, `Claude-User`, `Perplexity-User`, etc.
+- **None** - All bots must pay
 
-The threshold determines which traffic gets blocked (must pay):
+If the user names specific bots, match them to the supported list in `src/bots.ts`.
 
-| Threshold | Blocks |
-|-----------|--------|
-| 1 | Known automated only (score = 1) |
-| 2 | Almost certainly automated (score <= 2) |
-| 30 | Likely automated (score <= 30) |
+### Repeat for Each Path
 
-**Recommended starting point: 30** - Blocks known bots and likely-automated traffic.
-
-**This is REQUIRED** - there is no default value.
+Complete Steps 4.1-4.3 for each path before proceeding to configuration.
 
 ---
 
-## Step 6: Bot Exceptions (Optional)
-
-Bots listed in `except_bots` get free access without a 402 response. All other bots can still access the content—they just need to pay for it.
-
-Ask: **"Are there specific bots you want to allow free access to?"**
-
-This is typically used for bots you already have a partnership or licensing agreement with. Most configurations leave this empty.
-
-If the user names specific bots, match them to the supported list in `src/bots.ts`. Common examples:
-- Search: `Googlebot`, `BingBot`, `Applebot`
-- AI training: `GPTBot`, `ClaudeBot`, `CCBot`
-- AI assistants: `ChatGPT-User`, `Claude-User`, `PerplexityBot`
-
-### Unrecognized Bots
-
-If a bot isn't in the supported list, ask:
-
-1. "Do you have the Cloudflare detection ID for this bot?"
-2. "Is this a bot that MUST be allowed free access?"
-
-If they have a detection ID, use the `except_detection_ids` field instead of `except_bots`:
-
-```jsonc
-{
-  "pattern": "/blog/*",
-  "price": 0.50,
-  "bot_score_threshold": 30,
-  "except_bots": ["Googlebot"],
-  "except_detection_ids": [123456789, 987654321]  // Raw detection IDs
-}
-```
-
-### Finding Detection IDs
-
-Detection IDs can be found in the Cloudflare dashboard:
-
-1. Go to **AI Crawl Control**
-2. Navigate to **Crawlers**
-3. Find the crawler in the list
-4. Click the **three dot menu** in the Actions column
-5. Copy the detection ID
-
-This approach works for:
-- Custom or internal bots you want to allow
-- New crawlers not yet in the bot registry
-- Specific crawler variants with unique detection IDs
-
-**Note:** The user must provide the exact detection ID. There's no way to look up detection IDs by name outside the dashboard.
-
----
-
-## Step 7: Configure wrangler.jsonc
+## Step 5: Configure wrangler.jsonc
 
 Edit `wrangler.jsonc` with the gathered information.
 
-### 7.1 Set Worker Name (from Step 2)
+### 5.1 Set Worker Name and Account ID
 
 ```jsonc
 "name": "pay-per-crawl-example-com",
+"account_id": "your-account-id-here",
 ```
 
-### 7.2 Add Routes for Each Priced Path
+### 5.2 Add Routes for Each Priced Path
 
 **IMPORTANT:** Create ONE route for EACH path pattern. This keeps the worker narrow - it only intercepts paths that need pricing evaluation.
 
@@ -248,29 +196,24 @@ Example for `example.com` with `/blog/*` and `/premium/*`:
 ],
 ```
 
-### 7.3 Add Pricing Rules
+### 5.3 Add Pricing Rules
 
 ```jsonc
 "PRICING_RULES": [
   {
     "pattern": "/path-from-step-3/*",
-    "price": /* user's price from Step 4 */,
-    "bot_score_threshold": /* threshold from Step 5 */,
-    "except_bots": [/* bots from Step 6 */]
+    "price": /* user's price */,
+    "bot_score_threshold": /* 1, 2, or 30 */,
+    "except_bots": [/* bots from step 4.3 */]
   }
 ]
 ```
 
 **Each PRICING_RULE pattern must have a matching route!**
 
-For bot exceptions, you can also edit `src/bots.config.ts` which has preset combinations:
-- `STANDARD_EXCEPTIONS` - Search engines only
-- `PERMISSIVE_EXCEPTIONS` - Search engines + AI assistants
-- `NO_EXCEPTIONS` - No free access
-
 ---
 
-## Step 8: Deploy
+## Step 6: Deploy
 
 ```bash
 npm install
@@ -279,7 +222,7 @@ npm run deploy
 
 ---
 
-## Step 9: Verify Deployment
+## Step 7: Verify Deployment
 
 **Replace `example.com` with the user's actual domain in these commands.**
 
@@ -350,13 +293,21 @@ No need to delete and recreate - just edit in place.
 {
   pattern: string;              // Path pattern (required)
   price: number;                // Price in USD, >= 0.01, whole cents (required - SYSTEM CONSTRAINT)
-  bot_score_threshold: number;  // 0-100, allow if score >= this (required)
+  bot_score_threshold: number;  // 1, 2, or 30 (required)
   except_bots?: string[];       // Bot names to always allow (optional)
   except_detection_ids?: number[]; // Raw detection IDs to always allow (optional)
 }
 ```
 
 **About `except_detection_ids`:** Use this when you have specific bot detection IDs that aren't in the standard bot registry. Both `except_bots` and `except_detection_ids` can be used together - they're merged when evaluating exceptions.
+
+### Bot Score Threshold Reference
+
+| Threshold | Meaning | Use Case |
+|-----------|---------|----------|
+| **1** | Only blocks verified bots (score = 1) | Very permissive - most traffic passes |
+| **2** | Blocks known automated (score ≤ 2) | Permissive - blocks obvious bots only |
+| **30** | Blocks likely automated (score ≤ 30) | **Recommended** - balanced approach |
 
 ### Files to Edit
 
@@ -442,6 +393,30 @@ Use these exact names in the `except_bots` array:
 
 ---
 
+## Finding Detection IDs for Custom Bots
+
+If a bot isn't in the supported list, the user can find its detection ID in the dashboard:
+
+1. Go to **AI Crawl Control**
+2. Navigate to **Crawlers**
+3. Find the crawler in the list
+4. Click the **three dot menu** in the Actions column
+5. Copy the detection ID
+
+Then use `except_detection_ids` instead of `except_bots`:
+
+```jsonc
+{
+  "pattern": "/blog/*",
+  "price": 0.50,
+  "bot_score_threshold": 30,
+  "except_bots": ["Googlebot"],
+  "except_detection_ids": [123456789, 987654321]
+}
+```
+
+---
+
 ## How It Works (Technical)
 
 ```
@@ -495,7 +470,7 @@ Exception met       No exception
   "x402Version": "2.0.0",
   "accepts": [{
     "scheme": "deferred",
-    "network": "cloudflare:com",
+    "network": "cloudflare:402",
     "resource": "/path/from/request",
     "amount": "0.50",
     "asset": "USD"
@@ -572,6 +547,7 @@ Before running `npm run deploy`, verify:
 - [ ] At least one rule in `PRICING_RULES`
 - [ ] Each rule has `pattern`, `price`, and `bot_score_threshold`
 - [ ] All prices are >= $0.01 and in whole cent increments (system requirement)
+- [ ] All `bot_score_threshold` values are 1, 2, or 30
 - [ ] All `except_bots` names are from the supported list
 - [ ] All `except_detection_ids` are positive integers (if used)
 - [ ] Routes configured with correct `pattern` and `zone_name`

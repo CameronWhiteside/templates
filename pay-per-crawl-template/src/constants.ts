@@ -9,7 +9,7 @@
 // =============================================================================
 
 export const X402_VERSION = "2.0.0";
-export const NETWORK = "cloudflare:com";
+export const NETWORK = "cloudflare:402";
 export const SCHEME = "deferred";
 export const ASSET = "USD";
 
