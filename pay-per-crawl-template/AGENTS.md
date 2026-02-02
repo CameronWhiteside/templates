@@ -147,8 +147,8 @@ Ask: **"What bot score threshold for `{path}`?"**
 
 | Option | Threshold | What it blocks |
 |--------|-----------|----------------|
-| **1** | 1 | Only verified bots (score = 1) |
-| **2** | 2 | Known automated traffic (score ≤ 2) |
+| **1** | 1 | Known bots (score = 1) |
+| **2** | 2 | Certainly automated traffic (score ≤ 2) |
 | **30 (Recommended)** | 30 | Likely automated traffic (score ≤ 30) |
 
 **Recommended: 30** - This is the typical starting point that blocks known bots and likely-automated traffic while allowing humans through.
@@ -305,8 +305,8 @@ No need to delete and recreate - just edit in place.
 
 | Threshold | Meaning | Use Case |
 |-----------|---------|----------|
-| **1** | Only blocks verified bots (score = 1) | Very permissive - most traffic passes |
-| **2** | Blocks known automated (score ≤ 2) | Permissive - blocks obvious bots only |
+| **1** | Blocks known bots (score = 1) | Very permissive - most traffic passes |
+| **2** | Blocks certainly automated (score ≤ 2) | Permissive - blocks obvious bots only |
 | **30** | Blocks likely automated (score ≤ 30) | **Recommended** - balanced approach |
 
 ### Files to Edit
