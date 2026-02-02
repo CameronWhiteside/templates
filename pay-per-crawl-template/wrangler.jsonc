@@ -52,19 +52,25 @@
 		// IMPORTANT: Each pattern here needs a matching route above!
 		//
 		// Each rule needs:
-		//   pattern             - Path to protect ("/blog/*" or "/api/premium")
-		//   price               - Price in USD (minimum 0.01, whole cents)
-		//   bot_score_threshold - Allow if bot score >= this (30-70 typical)
-		//   except_bots         - (optional) Bot names to always allow
+		//   pattern               - Path to protect ("/blog/*" or "/api/premium")
+		//   price                 - Price in USD (minimum 0.01, whole cents - SYSTEM REQUIREMENT)
+		//   bot_score_threshold   - Allow if bot score >= this (30-70 typical)
+		//   except_bots           - (optional) Bot names to always allow (see bots.ts)
+		//   except_detection_ids  - (optional) Raw detection IDs to always allow
 		//
 		// Bot exceptions: see AGENTS.md for guided selection, or edit src/bots.config.ts
+		// Detection IDs: Find in dashboard → AI Crawl Control → Crawlers → Actions menu
+		//
+		// PRICING NOTE: $0.01 minimum and whole cents are Pay Per Crawl SYSTEM requirements.
+		// Prices outside these bounds may cause unexpected blocking or free access.
 		//
 		"PRICING_RULES": [
 			{
 				"pattern": "/content/*",
 				"price": 1.00,
 				"bot_score_threshold": 30,
-				"except_bots": []
+				"except_bots": [],
+				"except_detection_ids": []
 			}
 		]
 	}

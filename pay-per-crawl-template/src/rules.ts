@@ -60,10 +60,10 @@ function validateRule(rule: PricingRule, index: number): string | null {
 		return `Rule ${index + 1}: 'price' is required (e.g., 0.50 for $0.50)`;
 	}
 	if (rule.price < 0.01) {
-		return `Rule ${index + 1}: 'price' must be >= 0.01 (minimum $0.01)`;
+		return `Rule ${index + 1}: 'price' must be >= 0.01 (Pay Per Crawl system minimum - lower prices will not be enforced)`;
 	}
 	if (!isValidPrice(rule.price)) {
-		return `Rule ${index + 1}: 'price' must be in whole cent increments (e.g., 0.01, 0.09, 0.50, 1.00)`;
+		return `Rule ${index + 1}: 'price' must be in whole cent increments (Pay Per Crawl system requirement - fractional cents may cause unexpected behavior)`;
 	}
 
 	// Bot score threshold is REQUIRED
@@ -79,6 +79,17 @@ function validateRule(rule: PricingRule, index: number): string | null {
 		for (const botName of rule.except_bots) {
 			if (!isBotNameSupported(botName)) {
 				return `Rule ${index + 1}: Unknown bot name "${botName}". Supported: ${SUPPORTED_BOT_NAMES.slice(0, 5).join(", ")}... (see bots.ts)`;
+			}
+		}
+	}
+
+	// Validate detection IDs if provided (warn and skip invalid, don't fail)
+	if (rule.except_detection_ids && Array.isArray(rule.except_detection_ids)) {
+		for (const id of rule.except_detection_ids) {
+			if (typeof id !== "number" || !Number.isInteger(id) || id <= 0) {
+				console.warn(
+					`[pay-per-crawl] Rule ${index + 1}: Invalid detection ID "${id}" (must be positive integer). Skipping.`
+				);
 			}
 		}
 	}
@@ -147,10 +158,15 @@ export function evaluateRules(
 			continue;
 		}
 
-		// Specific bot exceptions
-		if (rule.except_bots && rule.except_bots.length > 0) {
-			const exceptIds = resolveBotsToIds(rule.except_bots);
-			const hasException = exceptIds.some((id) => detectionIds.includes(String(id)));
+		// Specific bot exceptions (from bot names and/or raw detection IDs)
+		const exceptIdsFromNames = rule.except_bots ? resolveBotsToIds(rule.except_bots) : [];
+		const exceptIdsRaw = (rule.except_detection_ids || []).filter(
+			(id) => typeof id === "number" && Number.isInteger(id) && id > 0
+		);
+		const allExceptIds = [...exceptIdsFromNames, ...exceptIdsRaw];
+
+		if (allExceptIds.length > 0) {
+			const hasException = allExceptIds.some((id) => detectionIds.includes(String(id)));
 			if (hasException) {
 				continue;
 			}

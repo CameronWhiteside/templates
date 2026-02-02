@@ -128,6 +128,17 @@ Ask the user: **What price do you want to set for each path?**
 
 **Do NOT suggest specific prices.** Pricing strategy is entirely up to the publisher.
 
+### Why These Pricing Constraints?
+
+> **IMPORTANT:** The $0.01 minimum and whole cent requirement are **Pay Per Crawl system-level constraints**, not just template validation. These are enforced by Cloudflare's infrastructure.
+>
+> If prices are configured outside these bounds (e.g., by editing the validation code):
+> - Prices below $0.01 may not trigger 402 responses when they should
+> - Fractional cent prices may cause inconsistent blocking behavior
+> - The dashboard and worker may behave differently
+>
+> **Do not attempt to bypass these constraints.** They exist because the payment infrastructure requires them.
+
 ---
 
 ## Step 5: Set Bot Score Threshold
@@ -178,14 +189,37 @@ If the user names specific bots, match them to the supported list in `src/bots.t
 
 If a bot isn't in the supported list, ask:
 
-1. "Do you have the exact User-Agent string or Cloudflare detection ID for this bot?"
+1. "Do you have the Cloudflare detection ID for this bot?"
 2. "Is this a bot that MUST be allowed free access?"
 
-If yes to both, confirm with the user:
+If they have a detection ID, use the `except_detection_ids` field instead of `except_bots`:
 
-> "This bot isn't in the standard list. After deploying the template, I can help you add custom matching logic to the worker code using the User-Agent or detection ID you provide. Want to proceed with setup now and handle this customization after?"
+```jsonc
+{
+  "pattern": "/blog/*",
+  "price": 0.50,
+  "bot_score_threshold": 30,
+  "except_bots": ["Googlebot"],
+  "except_detection_ids": [123456789, 987654321]  // Raw detection IDs
+}
+```
 
-If they accept, note the bot details and continue. Return to add custom logic in `src/index.ts` after deployment.
+### Finding Detection IDs
+
+Detection IDs can be found in the Cloudflare dashboard:
+
+1. Go to **AI Crawl Control**
+2. Navigate to **Crawlers**
+3. Find the crawler in the list
+4. Click the **three dot menu** in the Actions column
+5. Copy the detection ID
+
+This approach works for:
+- Custom or internal bots you want to allow
+- New crawlers not yet in the bot registry
+- Specific crawler variants with unique detection IDs
+
+**Note:** The user must provide the exact detection ID. There's no way to look up detection IDs by name outside the dashboard.
 
 ---
 
@@ -314,12 +348,15 @@ No need to delete and recreate - just edit in place.
 
 ```typescript
 {
-  pattern: string;           // Path pattern (required)
-  price: number;             // Price in USD, >= 0.01, whole cents (required)
-  bot_score_threshold: number; // 0-100, allow if score >= this (required)
-  except_bots?: string[];    // Bot names to always allow (optional)
+  pattern: string;              // Path pattern (required)
+  price: number;                // Price in USD, >= 0.01, whole cents (required - SYSTEM CONSTRAINT)
+  bot_score_threshold: number;  // 0-100, allow if score >= this (required)
+  except_bots?: string[];       // Bot names to always allow (optional)
+  except_detection_ids?: number[]; // Raw detection IDs to always allow (optional)
 }
 ```
+
+**About `except_detection_ids`:** Use this when you have specific bot detection IDs that aren't in the standard bot registry. Both `except_bots` and `except_detection_ids` can be used together - they're merged when evaluating exceptions.
 
 ### Files to Edit
 
@@ -534,7 +571,9 @@ Before running `npm run deploy`, verify:
 - [ ] Prerequisites met (Enterprise Bot Management + PPC Beta)
 - [ ] At least one rule in `PRICING_RULES`
 - [ ] Each rule has `pattern`, `price`, and `bot_score_threshold`
+- [ ] All prices are >= $0.01 and in whole cent increments (system requirement)
 - [ ] All `except_bots` names are from the supported list
+- [ ] All `except_detection_ids` are positive integers (if used)
 - [ ] Routes configured with correct `pattern` and `zone_name`
 - [ ] No other worker owns the target routes
 

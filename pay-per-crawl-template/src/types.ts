@@ -22,14 +22,21 @@ export interface PricingRule {
 	/**
 	 * Price in USD (dollars).
 	 *
-	 * Requirements:
-	 *   - Minimum: 0.01 ($0.01 = 1 cent)
-	 *   - Must be whole cent increments (0.01, 0.02, ..., 0.50, 1.00, etc.)
+	 * SYSTEM REQUIREMENTS (enforced by Pay Per Crawl):
+	 *   - Minimum: $0.01 (1 cent) - lower prices will not be enforced
+	 *   - Must be whole cent increments - fractional cents may cause
+	 *     unexpected blocking or free access
+	 *
+	 * These are NOT template preferences - they are hard constraints from
+	 * Cloudflare's Pay Per Crawl system. Prices outside these bounds may
+	 * silently fail to block crawlers or block when they shouldn't.
 	 *
 	 * Examples:
-	 *   - 0.09 = $0.09 (9 cents)
+	 *   - 0.01 = $0.01 (minimum valid price)
 	 *   - 0.50 = $0.50 (50 cents)
 	 *   - 1.00 = $1.00 (1 dollar)
+	 *   - 0.005 = INVALID (not whole cents)
+	 *   - 0.00 = INVALID (below minimum)
 	 */
 	price: number;
 
@@ -56,6 +63,23 @@ export interface PricingRule {
 	 * Full list of supported names: see src/bots.ts
 	 */
 	except_bots?: string[];
+
+	/**
+	 * Raw detection IDs to always allow through (optional).
+	 *
+	 * Use this when you have specific bot detection IDs that aren't in the
+	 * standard bot registry. You can find detection IDs in the Cloudflare
+	 * dashboard: AI Crawl Control → Crawlers → Actions column (three dot menu).
+	 *
+	 * This is useful for:
+	 *   - Custom or internal bots you want to allow
+	 *   - New crawlers not yet in the bot registry
+	 *   - Specific crawler variants with unique detection IDs
+	 *
+	 * Example:
+	 *   except_detection_ids: [123456789, 987654321]
+	 */
+	except_detection_ids?: number[];
 }
 
 /**
