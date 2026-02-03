@@ -121,6 +121,72 @@ function findProtectedRouteConfig(
 	);
 }
 
+// =============================================================================
+// BOT MANAGEMENT FILTERING
+// =============================================================================
+// When Bot Management data is available and bot_score_threshold is configured,
+// requests are evaluated before payment:
+//   - Humans (bot score > threshold) pass through FREE
+//   - Excepted bots (detection ID in except_detection_ids) pass through FREE
+//   - All other traffic must pay
+// =============================================================================
+
+/**
+ * Bot Management data from Cloudflare's cf object
+ */
+interface BotManagementData {
+	score?: number;
+	verifiedBot?: boolean;
+	detectionIds?: number[];
+}
+
+/**
+ * Check if a request should bypass payment based on Bot Management Filtering.
+ *
+ * @param botManagement - Bot Management data from request.cf
+ * @param config - Protected route configuration
+ * @returns true if request should bypass payment, false if payment required
+ */
+function shouldBypassPayment(
+	botManagement: BotManagementData | undefined,
+	config: ProtectedRouteConfig
+): boolean {
+	// No threshold configured = all traffic must pay (original behavior)
+	if (config.bot_score_threshold === undefined) {
+		return false;
+	}
+
+	// No Bot Management data = can't evaluate, require payment
+	if (!botManagement) {
+		console.warn(
+			"[x402-proxy] Bot Management Filtering configured but cf.botManagement not available. " +
+				"Ensure Bot Management is enabled on your zone. Falling back to payment requirement."
+		);
+		return false;
+	}
+
+	const botScore = botManagement.score ?? 99; // Default to human if no score
+	const detectionIds = botManagement.detectionIds ?? [];
+
+	// Check 1: Is this a human? (bot score ABOVE threshold)
+	if (botScore > config.bot_score_threshold) {
+		return true; // Human - bypass payment
+	}
+
+	// Check 2: Is this an excepted bot? (detection ID in exception list)
+	if (config.except_detection_ids && config.except_detection_ids.length > 0) {
+		const isExcepted = detectionIds.some((id) =>
+			config.except_detection_ids!.includes(id)
+		);
+		if (isExcepted) {
+			return true; // Excepted bot - bypass payment
+		}
+	}
+
+	// Neither human nor excepted bot - require payment
+	return false;
+}
+
 /**
  * Main proxy handler - intercepts protected routes, proxies everything else
  * Note: This middleware runs for all routes, but route handlers below can still
@@ -139,6 +205,22 @@ app.use("*", async (c, next) => {
 	// Check if this path is protected (including /__x402/protected)
 	const protectedConfig = findProtectedRouteConfig(path, protectedPatterns);
 	if (protectedConfig) {
+		// ─────────────────────────────────────────────────────────────────────
+		// Bot Management Filtering (if configured)
+		// ─────────────────────────────────────────────────────────────────────
+		// Check if this request should bypass payment based on bot score and exceptions.
+		// This runs BEFORE payment check - humans and excepted bots never see a 402.
+		const botManagement = (c.req.raw.cf as { botManagement?: BotManagementData } | undefined)?.botManagement;
+
+		if (shouldBypassPayment(botManagement, protectedConfig)) {
+			// Request bypasses payment - proxy directly to origin (or handle built-in endpoint)
+			if (path === "/__x402/protected") {
+				return next(); // Let the route handler below handle it
+			}
+			return proxyToOrigin(c.req.raw, c.env);
+		}
+		// ─────────────────────────────────────────────────────────────────────
+
 		// Ensure JWT_SECRET is configured before processing protected routes
 		if (!c.env.JWT_SECRET) {
 			return c.json(
@@ -256,12 +338,29 @@ app.get("/__x402/health", (c) => {
  * Useful for debugging and verifying deployment
  */
 app.get("/__x402/config", (c) => {
+	// Check if any patterns use Bot Management Filtering
+	const patterns = c.env.PROTECTED_PATTERNS || [];
+	const botFilteringEnabled = patterns.some(
+		(p) => p.bot_score_threshold !== undefined
+	);
+
 	return c.json({
 		network: c.env.NETWORK,
 		payTo: c.env.PAY_TO ? `***${c.env.PAY_TO.slice(-6)}` : null,
 		hasOriginUrl: !!c.env.ORIGIN_URL,
 		hasOriginService: !!c.env.ORIGIN_SERVICE,
-		protectedPatterns: c.env.PROTECTED_PATTERNS?.map((p) => p.pattern) || [],
+		protectedPatterns: patterns.map((p) => ({
+			pattern: p.pattern,
+			// Show Bot Management Filtering status per pattern
+			botManagementFiltering: p.bot_score_threshold !== undefined
+				? {
+						threshold: p.bot_score_threshold,
+						exceptionsCount: p.except_detection_ids?.length ?? 0,
+					}
+				: null,
+		})),
+		// Summary of Bot Management Filtering status
+		botManagementFiltering: botFilteringEnabled,
 	});
 });
 

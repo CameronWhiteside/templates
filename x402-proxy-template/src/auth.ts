@@ -59,6 +59,31 @@ export interface ProtectedRouteConfig {
 	price: string;
 	/** Human-readable description of what the payment is for */
 	description: string;
+	// ─────────────────────────────────────────────────────────────────────────
+	// Bot Management Filtering (optional - requires Cloudflare Bot Management)
+	// ─────────────────────────────────────────────────────────────────────────
+	/**
+	 * Bot score threshold for payment enforcement.
+	 * Requests with bot score ABOVE this threshold are considered human and pass through free.
+	 * Requests with bot score AT OR BELOW this threshold must pay (unless excepted).
+	 *
+	 * Recommended values:
+	 *   - 30 (default): Blocks likely automated traffic, humans pass free
+	 *   - 2: Very strict, only clear human traffic passes free
+	 *   - 1: Strictest, only verified humans pass free
+	 *
+	 * If not set, all traffic to this route must pay (no bot filtering).
+	 */
+	bot_score_threshold?: number;
+	/**
+	 * Detection IDs of bots that should get FREE access (bypass payment).
+	 * These are resolved from bot names during setup (see agent-reference/bots.ts).
+	 *
+	 * Example: [120623194, 117479730, 120424214] for Googlebot, BingBot, Applebot
+	 *
+	 * Only used when bot_score_threshold is set.
+	 */
+	except_detection_ids?: number[];
 }
 
 /**
