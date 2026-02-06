@@ -1,0 +1,103 @@
+/**
+ * Pay Per Crawl Worker - Configuration
+ *
+ * Block AI crawlers with HTTP 402 Payment Required unless they pay.
+ * Uses x402 v2.0.0 protocol format.
+ *
+ * PREREQUISITES:
+ *   1. Enterprise Bot Management enabled
+ *   2. Pay Per Crawl Beta enabled
+ *
+ * Without these, the worker won't block anything.
+ * Check: AI Crawl Control → Settings in dashboard
+ *
+ * BUILD PROCESS:
+ *   The PRICING_RULES below are transformed into src/config.json by the build script.
+ *   Run `npm run build:config` to regenerate, or `npm run deploy` (which runs it automatically).
+ *   src/config.json is gitignored - it's generated on each build.
+ */
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+
+	// =========================================================================
+	// WORKER NAME - Update for your domain
+	// =========================================================================
+	// Format: pay-per-crawl-{domain-slug}
+	// Example: pay-per-crawl-example-com
+	//
+	"name": "pay-per-crawl-example-com",
+
+	"main": "src/index.ts",
+	"compatibility_date": "2026-01-30",
+	"observability": { "enabled": true },
+	"upload_source_maps": true,
+
+	// =========================================================================
+	// BUNDLING CONFIG - Keep config.json as separate module
+	// =========================================================================
+	// no_bundle: true would prevent all bundling, but we want TypeScript compiled.
+	// Instead, we use find_additional_modules to include config.json as a separate module.
+	//
+	// This allows the Cloudflare dashboard to parse config.json directly from the
+	// deployed worker's modules (it looks for files['config.json']).
+	//
+	"find_additional_modules": true,
+	"rules": [
+		{
+			"type": "Data",
+			"globs": ["**/*.json"],
+			"fallthrough": true
+		}
+	],
+
+	// =========================================================================
+	// ROUTES - One route per priced path
+	// =========================================================================
+	// IMPORTANT: Add a route for EACH path pattern in PRICING_RULES.
+	// Only these paths will be intercepted by the worker.
+	//
+	// Format: "{domain}{pattern}"
+	//
+	// Example for example.com with /blog/* and /premium/* rules:
+	//
+	// "routes": [
+	// 	{ "pattern": "example.com/blog/*", "zone_name": "example.com" },
+	// 	{ "pattern": "example.com/premium/*", "zone_name": "example.com" }
+	// ],
+
+	"vars": {
+		// =====================================================================
+		// PRICING RULES (Input for build script)
+		// =====================================================================
+		// Define which paths to protect and at what price.
+		// Rules are checked in order - first match wins.
+		//
+		// IMPORTANT: Each pattern here needs a matching route above!
+		//
+		// Each rule needs:
+		//   pattern               - Path to protect ("/blog/*" or "/api/premium")
+		//   price                 - Price in USD (minimum 0.01, whole cents - SYSTEM REQUIREMENT)
+		//   bot_score_threshold   - Allow if bot score >= this (1, 2, or 30 recommended)
+		//   except_bots           - (optional) Bot names to always allow (see bots.ts)
+		//   except_detection_ids  - (optional) Raw detection IDs to always allow
+		//   enabled               - (optional) Whether rule is active (default: true)
+		//
+		// Bot names: "Googlebot", "BingBot", "GPTBot", "ChatGPT-User", etc.
+		//            See src/bots.ts for full list. Names are resolved to IDs at build time.
+		//
+		// Detection IDs: Find in dashboard → AI Crawl Control → Crawlers → Actions menu
+		//
+		// PRICING NOTE: $0.01 minimum and whole cents are Pay Per Crawl SYSTEM requirements.
+		// Prices outside these bounds may cause unexpected blocking or free access.
+		//
+		"PRICING_RULES": [
+			{
+				"pattern": "/content/*",
+				"price": 1.00,
+				"bot_score_threshold": 30,
+				"except_bots": ["Googlebot", "BingBot"],
+				"except_detection_ids": []
+			}
+		]
+	}
+}
