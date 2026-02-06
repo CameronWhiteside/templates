@@ -1,0 +1,25 @@
+# Dependencies
+node_modules/
+
+# Wrangler
+.wrangler/
+.dev.vars
+
+# Build output
+dist/
+
+# Generated config (built from wrangler.jsonc PRICING_RULES)
+# Run `npm run build:config` to regenerate
+src/config.json
+
+# OS
+.DS_Store
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Logs
+*.log
